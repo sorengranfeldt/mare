@@ -34,6 +34,15 @@
       <Source Name="pwdLastSet"/>
       <Target Name="adPasswordLastSet" ActionOnNullSource="Delete" DateFormat="yyyy-MM-ddThh:mm:ss"/>
     </FlowRule>-->
+    <FlowRule Name="AccountName" Direction="Export" xsi:type="FlowRuleToString">
+      <Source Name="AccountName">
+        <Transforms>
+          <Transform xsi:type="ToUpper"/>
+        </Transforms>
+      </Source>
+      <Target Name="sAMAccountName" ActionOnNullSource="None" />
+    </FlowRule>
+    
     <FlowRule Name="UACAsString" Direction="Import" xsi:type="FlowRuleToString">
       <Source Name="displayName">
         <Transforms>
