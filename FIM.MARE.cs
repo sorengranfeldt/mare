@@ -3,6 +3,8 @@
 // Jan 20, 2015 | soren granfeldt
 //  -added transforms
 //  -extended trace events
+// Jan 25, 2015 | soren granfeldt
+//  -added conditions and externals
 using Microsoft.MetadirectoryServices;
 using Microsoft.Win32;
 using System;
@@ -35,8 +37,6 @@ namespace FIM.MARE
 
     public class RulesExtension : IMASynchronization
     {
-        // code from - http://blogs.msdn.com/b/sergeim/archive/2008/12/10/how-to-do-etw-logging-from-net-application.aspx 
-        // debugging tools - http://msdn.microsoft.com/en-US/windows/desktop/bg162891 
         TraceSource source = new TraceSource("FIM.MARE", SourceLevels.All);
 
         public Configuration config = null;
@@ -45,8 +45,9 @@ namespace FIM.MARE
         {
             try
             {
+                string DLLName = Path.GetFileNameWithoutExtension(this.GetType().Assembly.CodeBase); //System.Reflection.Assembly.GetExecutingAssembly().GetName();
 #if DEBUG
-            string configurationFilePath = Path.Combine(System.IO.Directory.GetCurrentDirectory(), @"FIM.MARE.config.xml");
+                string configurationFilePath = Path.Combine(System.IO.Directory.GetCurrentDirectory(), string.Concat(DLLName, @".config.xml"));
 #else
                 string configurationFilePath = Path.Combine(Utils.ExtensionsDirectory, @"FIM.MARE.config.xml");
 #endif
@@ -107,8 +108,12 @@ namespace FIM.MARE
 
                 ManagementAgent ma = config.ManagementAgent.Where(m => m.Name.Equals(maName)).FirstOrDefault();
                 if (ma == null) throw new NotImplementedException("MA '" + maName + "' not found");
-                FlowRule rule = ma.FlowRule.Where(r => r.Name.Equals(FlowRuleName) && r.Direction.Equals(direction)).FirstOrDefault();
-                if (rule == null) throw new NotImplementedException(direction.ToString() + " rule '" + FlowRuleName + "' not found on MA '" + maName + "'. Please note that rule names are case-sensitive.");
+                List<FlowRule> rules = ma.FlowRule.Where(r => r.Name.Equals(FlowRuleName) && r.Direction.Equals(direction)).ToList<FlowRule>();
+                if (rules == null) throw new NotImplementedException(direction.ToString() + " rule '" + FlowRuleName + "' not found on MA '" + maName + "'. Please note that rule names are case-sensitive.");
+                source.TraceInformation("Found {0} matching rule(s)", rules.Count);
+                FlowRule rule = rules.Where(ru => ru.Conditions.AreMet(csentry, mventry, source)).FirstOrDefault();
+                //if (rule == null) throw new NotImplementedException("No " + direction.ToString() + " rule '" + FlowRuleName + "' not found on MA '" + maName + "' where conditions were met.");
+                if (rule == null) throw new DeclineMappingException("No " + direction.ToString() + " rule '" + FlowRuleName + "' not found on MA '" + maName + "' where conditions were met.");
 
                 #region FlowRuleCode
                 if (rule.GetType().Equals(typeof(FlowRuleCode)))
@@ -223,7 +228,6 @@ namespace FIM.MARE
                 csentry[AttributeName].Delete();
         }
         #endregion
-
         #region Source value helpers
         public string GetSourceOrDefaultValue(Direction direction, CSEntry csentry, MVEntry mventry, string sourceName, string defaultValue)
         {
@@ -465,11 +469,38 @@ public class ConfigurationManager
     }
 }
 
+#region Configuration
 [XmlRoot("Rules")]
 public class Configuration
 {
     [XmlElement("ManagementAgent")]
     public List<ManagementAgent> ManagementAgent { get; set; }
+    [XmlElement("ExternalFiles")]
+    public ExternalFiles ExternalFiles { get; set; }
+}
+public class ExternalFiles
+{
+    [XmlElement("XmlFile")]
+    public List<XmlFile> XmlFile { get; set; }
+    public ExternalFiles()
+    {
+        this.XmlFile = new List<XmlFile>();
+    }
+}
+[XmlInclude(typeof(XmlFile))]
+public class ExternalFile
+{
+    [XmlAttribute("Name")]
+    public string Name { get; set; }
+
+    [XmlAttribute("Path")]
+    public string Path { get; set; }
+}
+public class XmlFile : ExternalFile
+{
+    public void Load()
+    {
+    }
 }
 public class ManagementAgent
 {
@@ -520,7 +551,188 @@ public class ManagementAgent
     }
 
 }
-#region Enums
+#endregion
+
+
+#region Conditions
+public enum EvaluateAttribute
+{
+    [XmlEnum(Name = "CSEntry")]
+    CSEntry,
+    [XmlEnum(Name = "MVEntry")]
+    MVEntry
+}
+public enum ConditionOperator
+{
+    [XmlEnum(Name = "And")]
+    And,
+    [XmlEnum(Name = "Or")]
+    Or
+}
+[XmlInclude(typeof(ObjectClassMatch)), XmlInclude(typeof(SourceValueMatch)), XmlInclude(typeof(TargetValueMatch)), XmlInclude(typeof(SubCondition))]
+public class ConditionBase
+{
+    [XmlAttribute("Source")]
+    [XmlTextAttribute()]
+    public EvaluateAttribute Source { get; set; }
+    [XmlAttribute("Target")]
+    [XmlTextAttribute()]
+    public EvaluateAttribute Target { get; set; }
+
+    [XmlAttribute("AttributeName")]
+    public string AttributeName { get; set; }
+
+    public string SourceValue(CSEntry csentry, MVEntry mventry)
+    {
+        if (Source.Equals(EvaluateAttribute.CSEntry))
+        {
+            return csentry[AttributeName].IsPresent ? csentry[AttributeName].Value : null;
+        }
+        else
+        {
+            return mventry[AttributeName].IsPresent ? mventry[AttributeName].Value : null;
+        }
+    }
+    public string TargetValue(CSEntry csentry, MVEntry mventry)
+    {
+        if (Target.Equals(EvaluateAttribute.CSEntry))
+        {
+            return csentry[AttributeName].IsPresent ? csentry[AttributeName].Value : null;
+        }
+        else
+        {
+            return mventry[AttributeName].IsPresent ? mventry[AttributeName].Value : null;
+        }
+    }
+    public virtual bool IsMet(CSEntry csentry, MVEntry mventry, TraceSource source)
+    {
+        return true;
+    }
+}
+public class SubCondition : ConditionBase
+{
+    [XmlAttribute]
+    public ConditionOperator Operator { get; set; }
+    [XmlElement("Condition")]
+    public List<ConditionBase> Conditions { get; set; }
+    public SubCondition()
+    {
+        this.Conditions = new List<ConditionBase>();
+    }
+
+    public override bool IsMet(CSEntry csentry, MVEntry mventry, TraceSource source)
+    {
+        if (Operator.Equals(ConditionOperator.And))
+        {
+            bool met = true;
+            foreach (ConditionBase condition in Conditions)
+            {
+                met = condition.IsMet(csentry, mventry, source);
+                source.TraceInformation("Condition '{0}' returned: {1}", condition.GetType(), met);
+                if (met == false) break;
+            }
+            source.TraceInformation("All conditions {0} met", met ? "were" : "were not");
+            return met;
+        }
+        else
+        {
+            bool met = false;
+            foreach (ConditionBase condition in Conditions)
+            {
+                met = condition.IsMet(csentry, mventry, source);
+                source.TraceInformation("Condition '{0}' returned: {1}", condition.GetType(), met);
+                if (met == true) break;
+            }
+            source.TraceInformation("All conditions {0} met", met ? "were" : "were not");
+            return met;
+        }
+    }
+}
+public class ObjectClassMatch : ConditionBase
+{
+    [XmlAttribute("Pattern")]
+    public string Pattern { get; set; }
+
+    public override bool IsMet(CSEntry csentry, MVEntry mventry, TraceSource source)
+    {
+        return Source.Equals(EvaluateAttribute.CSEntry) ? Regex.IsMatch(csentry.ObjectType, this.Pattern) : Regex.IsMatch(mventry.ObjectType, this.Pattern);
+    }
+}
+public class ObjectClassNotMatch : ConditionBase
+{
+    [XmlAttribute("Pattern")]
+    public string Pattern { get; set; }
+
+    public override bool IsMet(CSEntry csentry, MVEntry mventry, TraceSource source)
+    {
+        return Source.Equals(EvaluateAttribute.CSEntry) ? !Regex.IsMatch(csentry.ObjectType, this.Pattern) : !Regex.IsMatch(mventry.ObjectType, this.Pattern);
+    }
+}
+public class SourceValueMatch : ConditionBase
+{
+    [XmlAttribute("Pattern")]
+    public string Pattern { get; set; }
+
+    public override bool IsMet(CSEntry csentry, MVEntry mventry, TraceSource source)
+    {
+        string value = SourceValue(csentry, mventry);
+        return string.IsNullOrEmpty(value) ? false : Regex.IsMatch(value, Pattern);
+    }
+}
+public class TargetValueMatch : ConditionBase
+{
+    [XmlAttribute("Pattern")]
+    public string Pattern { get; set; }
+
+    public override bool IsMet(CSEntry csentry, MVEntry mventry, TraceSource source)
+    {
+        string value = TargetValue(csentry, mventry);
+        return string.IsNullOrEmpty(value) ? false : Regex.IsMatch(value, Pattern);
+    }
+}
+public class Conditions
+{
+    [XmlAttribute("Operator")]
+    [XmlTextAttribute()]
+    public ConditionOperator Operator { get; set; }
+    [XmlElement("Condition")]
+    public List<ConditionBase> ConditionBase { get; set; }
+    public Conditions()
+    {
+        this.ConditionBase = new List<ConditionBase>();
+    }
+
+    public bool AreMet(CSEntry csentry, MVEntry mventry, TraceSource source)
+    {
+        if (Operator.Equals(ConditionOperator.And))
+        {
+            bool met = true;
+            foreach (ConditionBase condition in ConditionBase)
+            {
+                met = condition.IsMet(csentry, mventry, source);
+                source.TraceInformation("Condition '{0}' returned: {1}", condition.GetType(), met);
+                if (met == false) break;
+            }
+            source.TraceInformation("All conditions {0} met", met ? "were" : "were not");
+            return met;
+        }
+        else
+        {
+            bool met = false;
+            foreach (ConditionBase condition in ConditionBase)
+            {
+                met = condition.IsMet(csentry, mventry, source);
+                source.TraceInformation("Condition '{0}' returned: {1}", condition.GetType(), met);
+                if (met == true) break;
+            }
+            source.TraceInformation("All conditions {0} met", met ? "were" : "were not");
+            return met;
+        }
+    }
+}
+#endregion
+#region FlowRules
+
 public enum Direction
 {
     [XmlEnum(Name = "Import")]
@@ -540,8 +752,7 @@ public enum AttributeAction
     [XmlEnum(Name = "SetDefault")]
     SetDefault
 }
-#endregion
-#region FlowRules
+
 [XmlInclude(typeof(FlowRuleConcatenateString)), XmlInclude(typeof(FlowRuleConvertFromFileTimeUtc)), XmlInclude(typeof(FlowRuleCode)), XmlInclude(typeof(FlowRuleGUIDToString)), XmlInclude(typeof(FlowRuleSIDToString)), XmlInclude(typeof(FlowRuleToString))]
 public class FlowRule
 {
@@ -551,6 +762,9 @@ public class FlowRule
     [XmlAttribute("Direction")]
     [XmlTextAttribute()]
     public Direction Direction { get; set; }
+
+    [XmlElement("Conditions")]
+    public Conditions Conditions { get; set; }
 }
 public class FlowRuleConcatenateString : FlowRule
 {
