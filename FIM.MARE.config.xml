@@ -6,10 +6,10 @@
   <ManagementAgent Name="inceptio.local">
     <FlowRule Name="AccountName" Direction="Export" xsi:type="FlowRuleToString">
       <Conditions Operator="Or">
-        <Condition xsi:type="ObjectClassMatch" Source="CSEntry" Target="MVEntry" Pattern="^person$" />
-        <Condition xsi:type="SubCondition" Operator="Or">
-          <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="CompanyID" Pattern="^001|013$" />
-          <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="DepartmentID" Pattern="^011|114$" />
+        <Condition xsi:type="ObjectClassMatch" Source="CSEntry" Target="MVEntry" Pattern="^group" />
+        <Condition xsi:type="SubCondition" Operator="And">
+          <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="givenName" Pattern="^Risto|Robert$" />
+          <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="sn" Pattern="^Petersen$" />
         </Condition>
       </Conditions>
       <Source Name="AccountName">
@@ -18,6 +18,23 @@
         </Transforms>
       </Source>
       <Target Name="sAMAccountName" ActionOnNullSource="None" />
+    </FlowRule>
+
+    <FlowRule Name="IsActive" Direction="Import" xsi:type="FlowRuleBitIsNotSet">
+      <BitPosition>1</BitPosition>
+      <Source Name="userAccountControl"/>
+      <Target Name="isActive" ActionOnNullSource="Delete" />
+    </FlowRule>
+
+    <FlowRule Name="IsActiveText" Direction="Import" xsi:type="FlowRuleBitIsSet">
+      <BitPosition>1</BitPosition>
+      <Source Name="userAccountControl"/>
+      <Target Name="isActiveText" ActionOnNullSource="Delete">
+        <Transforms>
+          <Transform xsi:type="Replace" OldValue="True" NewValue="Inactive"/>
+          <Transform xsi:type="Replace" OldValue="False" NewValue="Active"/>
+        </Transforms>
+      </Target>
     </FlowRule>
   </ManagementAgent>
 </Rules>

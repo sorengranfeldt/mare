@@ -4,7 +4,8 @@
 //  -added transforms
 //  -extended trace events
 // Jan 25, 2015 | soren granfeldt
-//  -added conditions and externals
+//  -added conditions and started externals
+
 using Microsoft.MetadirectoryServices;
 using Microsoft.Win32;
 using System;
@@ -19,6 +20,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Serialization;
+using System.Xml.XPath;
 
 /*
 <source name"HomeDirServer">
@@ -45,23 +47,23 @@ namespace FIM.MARE
         {
             try
             {
-                string DLLName = Path.GetFileNameWithoutExtension(this.GetType().Assembly.CodeBase); //System.Reflection.Assembly.GetExecutingAssembly().GetName();
+                string ConfigFileName = string.Concat(Path.GetFileNameWithoutExtension(this.GetType().Assembly.CodeBase), @".config.xml"); //System.Reflection.Assembly.GetExecutingAssembly().GetName();
 #if DEBUG
-                string configurationFilePath = Path.Combine(System.IO.Directory.GetCurrentDirectory(), string.Concat(DLLName, @".config.xml"));
+                string configurationFilePath = Path.Combine(System.IO.Directory.GetCurrentDirectory(), ConfigFileName);
 #else
-                string configurationFilePath = Path.Combine(Utils.ExtensionsDirectory, @"FIM.MARE.config.xml");
+                string configurationFilePath = Path.Combine(Utils.ExtensionsDirectory, ConfigFileName);
 #endif
-                source.TraceInformation("Loading configuration from", configurationFilePath);
+                source.TraceInformation("Loading configuration from {0}", configurationFilePath);
                 ConfigurationManager cfg = new ConfigurationManager();
                 cfg.LoadSettingsFromFile(configurationFilePath, ref config);
                 source.TraceInformation("Loaded configuration");
-                source.TraceInformation("Loading assemblies", configurationFilePath);
+                source.TraceInformation("Loading assemblies");
                 config.ManagementAgent.ForEach(ma => ma.LoadAssembly());
                 source.TraceInformation("Loaded assemblies");
             }
             catch (Exception ex)
             {
-                source.TraceEvent(TraceEventType.Critical, ex.HResult, ex.Message);
+                source.TraceEvent(TraceEventType.Error, ex.HResult, "{0}: {1}", ex.GetType(), ex.Message);
                 throw ex;
             }
         }
@@ -104,6 +106,7 @@ namespace FIM.MARE
             {
                 string maName = csentry.MA.Name;
                 source.TraceInformation("Enter {0} [{1}]", "MapAttributesForImportExportDetached", direction);
+                source.TraceInformation("MV: '{0}'", mventry.ObjectID);
                 source.TraceInformation("MA: '{0}', Rule '{0}'", maName, FlowRuleName);
 
                 ManagementAgent ma = config.ManagementAgent.Where(m => m.Name.Equals(maName)).FirstOrDefault();
@@ -111,8 +114,8 @@ namespace FIM.MARE
                 List<FlowRule> rules = ma.FlowRule.Where(r => r.Name.Equals(FlowRuleName) && r.Direction.Equals(direction)).ToList<FlowRule>();
                 if (rules == null) throw new NotImplementedException(direction.ToString() + " rule '" + FlowRuleName + "' not found on MA '" + maName + "'. Please note that rule names are case-sensitive.");
                 source.TraceInformation("Found {0} matching rule(s)", rules.Count);
+                foreach (FlowRule r in rules) source.TraceInformation("Found rule '{0}'", r.Name);
                 FlowRule rule = rules.Where(ru => ru.Conditions.AreMet(csentry, mventry, source)).FirstOrDefault();
-                //if (rule == null) throw new NotImplementedException("No " + direction.ToString() + " rule '" + FlowRuleName + "' not found on MA '" + maName + "' where conditions were met.");
                 if (rule == null) throw new DeclineMappingException("No " + direction.ToString() + " rule '" + FlowRuleName + "' not found on MA '" + maName + "' where conditions were met.");
 
                 #region FlowRuleCode
@@ -164,15 +167,29 @@ namespace FIM.MARE
                     return;
                 }
                 #endregion
+                #region FlowRuleBitIsSet
+                if (rule.GetType().Equals(typeof(FlowRuleBitIsSet)))
+                {
+                    InvokeFlowRuleBitIsSet(rule, csentry, mventry);
+                    return;
+                }
+                #endregion
+                #region FlowRuleBitIsNotSet
+                if (rule.GetType().Equals(typeof(FlowRuleBitIsNotSet)))
+                {
+                    InvokeFlowRuleBitIsNotSet(rule, csentry, mventry);
+                    return;
+                }
+                #endregion
             }
             catch (Exception ex)
             {
-                source.TraceEvent(TraceEventType.Error, ex.HResult, ex.Message);
+                source.TraceEvent(TraceEventType.Error, ex.HResult, "{0}: {1}", ex.GetType(), ex.Message);
                 throw ex;
             }
             finally
             {
-                source.TraceInformation("Enter {0} [{1}]", "MapAttributesForImportExportDetached", direction);
+                source.TraceInformation("Exit {0} [{1}]", "MapAttributesForImportExportDetached", direction);
             }
         }
         void IMASynchronization.MapAttributesForImport(string FlowRuleName, CSEntry csentry, MVEntry mventry)
@@ -454,6 +471,71 @@ namespace FIM.MARE
             }
             source.TraceInformation("Exit {0}", "InvokeFlowRuleToNumber");
         }
+        public void InvokeFlowRuleBitIsSet(FlowRule rule, CSEntry csentry, MVEntry mventry)
+        {
+            source.TraceInformation("Enter {0}", "InvokeFlowRuleBitIsSet");
+            FlowRuleBitIsSet r = (FlowRuleBitIsSet)rule;
+            bool sourceValueIsPresent = r.Direction.Equals(Direction.Import) ? csentry[r.Source.Name].IsPresent : mventry[r.Source.Name].IsPresent;
+            if (sourceValueIsPresent)
+            {
+                string value = r.Source.GetValueOrDefault(r.Direction, csentry, mventry);
+                value = r.Source.Transform(value, source);
+                value = r.Target.Transform(value, source);
+                long longValue = long.Parse(value);
+                value = ((longValue & (1 << r.BitPosition)) != 0).ToString();
+                value = r.Target.Transform(value, source);
+                SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, value);
+            }
+            else
+            {
+                switch (r.Target.ActionOnNullSource)
+                {
+                    case AttributeAction.None:
+                        throw new DeclineMappingException("No default action");
+                    case AttributeAction.Delete:
+                        DeleteTargetValue(r.Direction, csentry, mventry, r.Target.Name);
+                        break;
+                    case AttributeAction.SetDefault:
+                        SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, r.Target.DefaultValue);
+                        break;
+                    default:
+                        throw new DeclineMappingException("No default action");
+                }
+            }
+            source.TraceInformation("Exit {0}", "InvokeFlowRuleBitIsSet");
+        }
+        public void InvokeFlowRuleBitIsNotSet(FlowRule rule, CSEntry csentry, MVEntry mventry)
+        {
+            source.TraceInformation("Enter {0}", "InvokeFlowRuleBitIsNotSet");
+            FlowRuleBitIsNotSet r = (FlowRuleBitIsNotSet)rule;
+            bool sourceValueIsPresent = r.Direction.Equals(Direction.Import) ? csentry[r.Source.Name].IsPresent : mventry[r.Source.Name].IsPresent;
+            if (sourceValueIsPresent)
+            {
+                string value = r.Source.GetValueOrDefault(r.Direction, csentry, mventry);
+                value = r.Source.Transform(value, source);
+                long longValue = long.Parse(value);
+                value = ((longValue & (1 << r.BitPosition)) == 0).ToString();
+                value = r.Target.Transform(value, source);
+                SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, value);
+            }
+            else
+            {
+                switch (r.Target.ActionOnNullSource)
+                {
+                    case AttributeAction.None:
+                        throw new DeclineMappingException("No default action");
+                    case AttributeAction.Delete:
+                        DeleteTargetValue(r.Direction, csentry, mventry, r.Target.Name);
+                        break;
+                    case AttributeAction.SetDefault:
+                        SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, r.Target.DefaultValue);
+                        break;
+                    default:
+                        throw new DeclineMappingException("No default action");
+                }
+            }
+            source.TraceInformation("Exit {0}", "InvokeFlowRuleBitIsNotSet");
+        }
         #endregion
     }
 }
@@ -498,8 +580,21 @@ public class ExternalFile
 }
 public class XmlFile : ExternalFile
 {
+    XPathDocument document;
+    XPathNavigator navigator;
+
+    public string Query(string XPathQuery)
+    {
+        XPathQuery = "sum(//price/text())";
+        XPathExpression query = navigator.Compile(XPathQuery);
+        //Double total = (Double)navigator.Evaluate(query);
+        return null;
+    }
+
     public void Load()
     {
+        XPathDocument document = new XPathDocument(this.Path);
+        XPathNavigator navigator = document.CreateNavigator();
     }
 }
 public class ManagementAgent
@@ -552,7 +647,6 @@ public class ManagementAgent
 
 }
 #endregion
-
 
 #region Conditions
 public enum EvaluateAttribute
@@ -628,10 +722,10 @@ public class SubCondition : ConditionBase
             foreach (ConditionBase condition in Conditions)
             {
                 met = condition.IsMet(csentry, mventry, source);
-                source.TraceInformation("Condition '{0}' returned: {1}", condition.GetType(), met);
+                source.TraceInformation("'And' condition '{0}' returned: {1}", condition.GetType(), met);
                 if (met == false) break;
             }
-            source.TraceInformation("All conditions {0} met", met ? "were" : "were not");
+            source.TraceInformation("All 'And' conditions {0} met", met ? "were" : "were not");
             return met;
         }
         else
@@ -640,10 +734,10 @@ public class SubCondition : ConditionBase
             foreach (ConditionBase condition in Conditions)
             {
                 met = condition.IsMet(csentry, mventry, source);
-                source.TraceInformation("Condition '{0}' returned: {1}", condition.GetType(), met);
+                source.TraceInformation("'Or' condition '{0}' returned: {1}", condition.GetType(), met);
                 if (met == true) break;
             }
-            source.TraceInformation("All conditions {0} met", met ? "were" : "were not");
+            source.TraceInformation("One or more 'Or' conditions {0} met", met ? "were" : "were not");
             return met;
         }
     }
@@ -710,10 +804,10 @@ public class Conditions
             foreach (ConditionBase condition in ConditionBase)
             {
                 met = condition.IsMet(csentry, mventry, source);
-                source.TraceInformation("Condition '{0}' returned: {1}", condition.GetType(), met);
+                source.TraceInformation("'And' condition '{0}' returned: {1}", condition.GetType(), met);
                 if (met == false) break;
             }
-            source.TraceInformation("All conditions {0} met", met ? "were" : "were not");
+            source.TraceInformation("All 'And' conditions {0} met", met ? "were" : "were not");
             return met;
         }
         else
@@ -722,10 +816,10 @@ public class Conditions
             foreach (ConditionBase condition in ConditionBase)
             {
                 met = condition.IsMet(csentry, mventry, source);
-                source.TraceInformation("Condition '{0}' returned: {1}", condition.GetType(), met);
+                source.TraceInformation("'Or' condition '{0}' returned: {1}", condition.GetType(), met);
                 if (met == true) break;
             }
-            source.TraceInformation("All conditions {0} met", met ? "were" : "were not");
+            source.TraceInformation("One or more 'Or' conditions {0} met", met ? "were" : "were not");
             return met;
         }
     }
@@ -753,7 +847,7 @@ public enum AttributeAction
     SetDefault
 }
 
-[XmlInclude(typeof(FlowRuleConcatenateString)), XmlInclude(typeof(FlowRuleConvertFromFileTimeUtc)), XmlInclude(typeof(FlowRuleCode)), XmlInclude(typeof(FlowRuleGUIDToString)), XmlInclude(typeof(FlowRuleSIDToString)), XmlInclude(typeof(FlowRuleToString))]
+[XmlInclude(typeof(FlowRuleConcatenateString)), XmlInclude(typeof(FlowRuleConvertFromFileTimeUtc)), XmlInclude(typeof(FlowRuleCode)), XmlInclude(typeof(FlowRuleGUIDToString)), XmlInclude(typeof(FlowRuleSIDToString)), XmlInclude(typeof(FlowRuleToString)), XmlInclude(typeof(FlowRuleBitIsSet)), XmlInclude(typeof(FlowRuleBitIsNotSet))]
 public class FlowRule
 {
     [XmlAttribute("Name")]
@@ -765,6 +859,11 @@ public class FlowRule
 
     [XmlElement("Conditions")]
     public Conditions Conditions { get; set; }
+
+    public FlowRule()
+    {
+        this.Conditions = new Conditions();
+    }
 }
 public class FlowRuleConcatenateString : FlowRule
 {
@@ -797,6 +896,28 @@ public class FlowRuleToNumber : FlowRule
 }
 public class FlowRuleConvertFromFileTimeUtc : FlowRule
 {
+    [XmlElement("Source")]
+    public Attribute Source { get; set; }
+
+    [XmlElement("Target")]
+    public Attribute Target { get; set; }
+}
+public class FlowRuleBitIsSet : FlowRule
+{
+    [XmlElement("BitPosition")]
+    public int BitPosition { get; set; }
+
+    [XmlElement("Source")]
+    public Attribute Source { get; set; }
+
+    [XmlElement("Target")]
+    public Attribute Target { get; set; }
+}
+public class FlowRuleBitIsNotSet : FlowRule
+{
+    [XmlElement("BitPosition")]
+    public int BitPosition { get; set; }
+
     [XmlElement("Source")]
     public Attribute Source { get; set; }
 
