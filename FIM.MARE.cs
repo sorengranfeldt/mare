@@ -1,18 +1,25 @@
-// Jan 10, 2015 | soren granfeldt
+// jan 10, 2015 | soren granfeldt
 //  -initial version started
-// Jan 20, 2015 | soren granfeldt
+// jan 20, 2015 | soren granfeldt
 //  -added transforms
 //  -extended trace events
-// Jan 25, 2015 | soren granfeldt
+// jan 25, 2015 | soren granfeldt
 //  -added conditions and started externals
+// jan 26, 2015 | soren granfeldt
+//  -added BitIsSet and BitIsNotSet flow rules
+//  -added support for copying and renaming DLL and reading corresponding configuration file
+// jan 29, 2015 | soren granfeldt
+//  -reduced number of rules and made more generic by moving fuctionality to Transforms instead
 
 using Microsoft.MetadirectoryServices;
 using Microsoft.Win32;
 using System;
 using System.CodeDom.Compiler;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Eventing;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -36,10 +43,9 @@ using System.Xml.XPath;
  */
 namespace FIM.MARE
 {
-
     public class RulesExtension : IMASynchronization
     {
-        TraceSource source = new TraceSource("FIM.MARE", SourceLevels.All);
+        TraceSource traceSource = new TraceSource("FIM.MARE", SourceLevels.All);
 
         public Configuration config = null;
 
@@ -53,31 +59,31 @@ namespace FIM.MARE
 #else
                 string configurationFilePath = Path.Combine(Utils.ExtensionsDirectory, ConfigFileName);
 #endif
-                source.TraceInformation("Loading configuration from {0}", configurationFilePath);
+                traceSource.TraceInformation("Loading configuration from {0}", configurationFilePath);
                 ConfigurationManager cfg = new ConfigurationManager();
                 cfg.LoadSettingsFromFile(configurationFilePath, ref config);
-                source.TraceInformation("Loaded configuration");
-                source.TraceInformation("Loading assemblies");
+                traceSource.TraceInformation("Loaded configuration");
+                traceSource.TraceInformation("Loading assemblies");
                 config.ManagementAgent.ForEach(ma => ma.LoadAssembly());
-                source.TraceInformation("Loaded assemblies");
+                traceSource.TraceInformation("Loaded assemblies");
             }
             catch (Exception ex)
             {
-                source.TraceEvent(TraceEventType.Error, ex.HResult, "{0}: {1}", ex.GetType(), ex.Message);
+                traceSource.TraceEvent(TraceEventType.Error, ex.HResult, "{0}: {1}", ex.GetType(), ex.Message);
                 throw ex;
             }
         }
         void IMASynchronization.Initialize()
         {
-            source.TraceInformation("Initialize");
+            traceSource.TraceInformation("Initialize");
         }
         void IMASynchronization.Terminate()
         {
-            source.TraceInformation("Terminate");
-            source.Close();
+            traceSource.TraceInformation("Terminate");
+            traceSource.Close();
         }
 
-        #region Not Implemented
+        #region not implemented
         bool IMASynchronization.ShouldProjectToMV(CSEntry csentry, out string MVObjectType)
         {
             throw new EntryPointNotImplementedException();
@@ -105,17 +111,17 @@ namespace FIM.MARE
             try
             {
                 string maName = csentry.MA.Name;
-                source.TraceInformation("Enter {0} [{1}]", "MapAttributesForImportExportDetached", direction);
-                source.TraceInformation("MV: '{0}'", mventry.ObjectID);
-                source.TraceInformation("MA: '{0}', Rule '{0}'", maName, FlowRuleName);
+                traceSource.TraceInformation("Enter {0} [{1}]", "MapAttributesForImportExportDetached", direction);
+                traceSource.TraceInformation("MV: '{0}'", mventry.ObjectID);
+                traceSource.TraceInformation("MA: '{0}', Rule '{1}'", maName, FlowRuleName);
 
                 ManagementAgent ma = config.ManagementAgent.Where(m => m.Name.Equals(maName)).FirstOrDefault();
                 if (ma == null) throw new NotImplementedException("MA '" + maName + "' not found");
                 List<FlowRule> rules = ma.FlowRule.Where(r => r.Name.Equals(FlowRuleName) && r.Direction.Equals(direction)).ToList<FlowRule>();
                 if (rules == null) throw new NotImplementedException(direction.ToString() + " rule '" + FlowRuleName + "' not found on MA '" + maName + "'. Please note that rule names are case-sensitive.");
-                source.TraceInformation("Found {0} matching rule(s)", rules.Count);
-                foreach (FlowRule r in rules) source.TraceInformation("Found rule '{0}'", r.Name);
-                FlowRule rule = rules.Where(ru => ru.Conditions.AreMet(csentry, mventry, source)).FirstOrDefault();
+                traceSource.TraceInformation("Found {0} matching rule(s)", rules.Count);
+                foreach (FlowRule r in rules) traceSource.TraceInformation("Found rule '{0}'", r.Name);
+                FlowRule rule = rules.Where(ru => ru.Conditions.AreMet(csentry, mventry, traceSource)).FirstOrDefault();
                 if (rule == null) throw new DeclineMappingException("No " + direction.ToString() + " rule '" + FlowRuleName + "' not found on MA '" + maName + "' where conditions were met.");
 
                 #region FlowRuleCode
@@ -125,71 +131,22 @@ namespace FIM.MARE
                     return;
                 }
                 #endregion
-                #region FlowRuleConvertFromFileTimeUtc
-                if (rule.GetType().Equals(typeof(FlowRuleConvertFromFileTimeUtc)))
+                #region FlowRuleDefault
+                if (rule.GetType().Equals(typeof(FlowRule)))
                 {
-                    InvokeFlowRuleConvertFromFileTimeUtc(rule, csentry, mventry);
-                    return;
-                }
-                #endregion
-                #region FlowRuleConcatenateString
-                if (rule.GetType().Equals(typeof(FlowRuleConcatenateString)))
-                {
-                    InvokeFlowRuleConcatenateString(rule, csentry, mventry);
-                    return;
-                }
-                #endregion
-                #region FlowRuleGUIDToString
-                if (rule.GetType().Equals(typeof(FlowRuleGUIDToString)))
-                {
-                    InvokeFlowRuleGUIDToString(rule, csentry, mventry);
-                    return;
-                }
-                #endregion
-                #region FlowRuleSIDToString
-                if (rule.GetType().Equals(typeof(FlowRuleSIDToString)))
-                {
-                    InvokeFlowRuleSIDToString(rule, csentry, mventry);
-                    return;
-                }
-                #endregion
-                #region FlowRuleToString
-                if (rule.GetType().Equals(typeof(FlowRuleToString)))
-                {
-                    InvokeFlowRuleToString(rule, csentry, mventry);
-                    return;
-                }
-                #endregion
-                #region FlowRuleToNumber
-                if (rule.GetType().Equals(typeof(FlowRuleToNumber)))
-                {
-                    InvokeFlowRuleToNumber(rule, csentry, mventry);
-                    return;
-                }
-                #endregion
-                #region FlowRuleBitIsSet
-                if (rule.GetType().Equals(typeof(FlowRuleBitIsSet)))
-                {
-                    InvokeFlowRuleBitIsSet(rule, csentry, mventry);
-                    return;
-                }
-                #endregion
-                #region FlowRuleBitIsNotSet
-                if (rule.GetType().Equals(typeof(FlowRuleBitIsNotSet)))
-                {
-                    InvokeFlowRuleBitIsNotSet(rule, csentry, mventry);
+                    InvokeFlowRule(rule, csentry, mventry);
                     return;
                 }
                 #endregion
             }
             catch (Exception ex)
             {
-                source.TraceEvent(TraceEventType.Error, ex.HResult, "{0}: {1}", ex.GetType(), ex.Message);
+                traceSource.TraceEvent(TraceEventType.Error, ex.HResult, "{0}: {1}", ex.GetType(), ex.Message);
                 throw ex;
             }
             finally
             {
-                source.TraceInformation("Exit {0} [{1}]", "MapAttributesForImportExportDetached", direction);
+                traceSource.TraceInformation("Exit {0} [{1}]", "MapAttributesForImportExportDetached", direction);
             }
         }
         void IMASynchronization.MapAttributesForImport(string FlowRuleName, CSEntry csentry, MVEntry mventry)
@@ -201,118 +158,20 @@ namespace FIM.MARE
             this.MapAttributesForImportExportDetached(FlowRuleName, csentry, mventry, Direction.Export);
         }
 
-        #region Rule implementations
+        public void InvokeFlowRule(FlowRule rule, CSEntry csentry, MVEntry mventry)
+        {
+            traceSource.TraceInformation("Enter {0}", "InvokeFlowRule");
 
-        #region Target value helpers
-        public void SetTargetValue(Direction direction, CSEntry csentry, MVEntry mventry, string AttributeName, string Value)
-        {
-            source.TraceInformation("Set {0} [{1}] value to '{2}'", AttributeName, direction, Value);
-            if (direction.Equals(Direction.Import))
-                mventry[AttributeName].Value = Value;
-            else
-                csentry[AttributeName].Value = Value;
-        }
-        public void SetTargetValue(Direction direction, CSEntry csentry, MVEntry mventry, string AttributeName, long Value)
-        {
-            source.TraceInformation("Set {0} [{1}] value to '{2}'", AttributeName, direction, Value);
-            if (direction.Equals(Direction.Import))
-                mventry[AttributeName].IntegerValue = Value;
-            else
-                csentry[AttributeName].IntegerValue = Value;
-        }
-        public void SetTargetValue(Direction direction, CSEntry csentry, MVEntry mventry, string AttributeName, bool Value)
-        {
-            source.TraceInformation("Set {0} [{1}] value to '{2}'", AttributeName, direction, Value);
-            if (direction.Equals(Direction.Import))
-                mventry[AttributeName].BooleanValue = Value;
-            else
-                csentry[AttributeName].BooleanValue = Value;
-        }
-        public void SetTargetValue(Direction direction, CSEntry csentry, MVEntry mventry, string AttributeName, byte[] Value)
-        {
-            source.TraceInformation("Set {0} [{1}] value to '{2}'", AttributeName, direction, Value);
-            if (direction.Equals(Direction.Import))
-                mventry[AttributeName].BinaryValue = Value;
-            else
-                csentry[AttributeName].BinaryValue = Value;
-        }
-        public void DeleteTargetValue(Direction direction, CSEntry csentry, MVEntry mventry, string AttributeName)
-        {
-            source.TraceInformation("Deleting {0} [{1}] value", AttributeName, direction);
-            if (direction.Equals(Direction.Import))
-                mventry[AttributeName].Delete();
-            else
-                csentry[AttributeName].Delete();
-        }
-        #endregion
-        #region Source value helpers
-        public string GetSourceOrDefaultValue(Direction direction, CSEntry csentry, MVEntry mventry, string sourceName, string defaultValue)
-        {
-            string returnValue = null;
-            bool sourceValueIsPresent = direction.Equals(Direction.Import) ? csentry[sourceName].IsPresent : mventry[sourceName].IsPresent;
-            if (sourceValueIsPresent)
-            {
-                returnValue = direction.Equals(Direction.Import) ? csentry[sourceName].Value : mventry[sourceName].Value;
-            }
-            else
-            {
-                returnValue = defaultValue;
-            }
-            return returnValue;
-        }
-        #endregion
-
-        public void InvokeFlowRuleGUIDToString(FlowRule rule, CSEntry csentry, MVEntry mventry)
-        {
-            FlowRuleGUIDToString r = (FlowRuleGUIDToString)rule;
-            bool sourceValueIsPresent = r.Direction.Equals(Direction.Import) ? csentry[r.Source.Name].IsPresent : mventry[r.Source.Name].IsPresent;
-            if (sourceValueIsPresent)
-            {
-                string value = r.Direction.Equals(Direction.Import) ? csentry[r.Source.Name].BinaryValue.ToString() : mventry[r.Source.Name].BinaryValue.ToString();
-                value = r.Source.Transform(value, source);
-                value = r.Target.Transform(value, source);
-                SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, value);
-            }
-            else
-            {
-                switch (r.Target.ActionOnNullSource)
-                {
-                    case AttributeAction.None:
-                        throw new DeclineMappingException("No default action");
-                    case AttributeAction.Delete:
-                        DeleteTargetValue(r.Direction, csentry, mventry, r.Target.Name);
-                        break;
-                    case AttributeAction.SetDefault:
-                        SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, r.Target.DefaultValue);
-                        break;
-                    default:
-                        throw new DeclineMappingException("No default action");
-                }
-            }
-        }
-        public void InvokeFlowRuleConcatenateString(FlowRule rule, CSEntry csentry, MVEntry mventry)
-        {
-            FlowRuleConcatenateString r = (FlowRuleConcatenateString)rule;
+            FlowRule r = (FlowRule)rule;
             string targetValue = null;
-            foreach (Value value in r.SourceList.Source)
+            foreach (Value value in r.SourceExpression.Source)
             {
                 if (value.GetType().Equals(typeof(Attribute)))
                 {
                     Attribute attr = (Attribute)value;
-                    bool sourceValueIsPresent = r.Direction.Equals(Direction.Import) ? csentry[attr.Name].IsPresent : mventry[attr.Name].IsPresent;
-                    if (sourceValueIsPresent)
-                    {
-                        string concateValue = attr.GetValueOrDefault(r.Direction, csentry, mventry);
-                        concateValue = attr.Transform(concateValue, source);
-                        targetValue = targetValue + attr.Transform(concateValue, source);
-                    }
-                    else
-                    {
-                        if (!string.IsNullOrEmpty(value.DefaultValue))
-                        {
-                            targetValue = targetValue + value.DefaultValue;
-                        }
-                    }
+                    string concateValue = attr.GetValueOrDefault(r.Direction, csentry, mventry, traceSource);
+                    concateValue = attr.Transform(concateValue, traceSource);
+                    targetValue = targetValue + concateValue;
                     continue;
                 }
                 if (value.GetType().Equals(typeof(Constant)))
@@ -321,222 +180,21 @@ namespace FIM.MARE
                     continue;
                 }
             }
-            if (string.IsNullOrEmpty(targetValue))
-            {
-                switch (r.Target.ActionOnNullSource)
-                {
-                    case AttributeAction.None:
-                        throw new DeclineMappingException("No default action");
-                    case AttributeAction.Delete:
-                        DeleteTargetValue(r.Direction, csentry, mventry, r.Target.Name);
-                        break;
-                    case AttributeAction.SetDefault:
-                        SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, r.Target.DefaultValue);
-                        break;
-                    default:
-                        throw new DeclineMappingException("No default action");
-                }
-            }
-            else
-            {
-                targetValue = r.Target.Transform(targetValue, source);
-                SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, targetValue);
-            }
-        }
-        public void InvokeFlowRuleConvertFromFileTimeUtc(FlowRule rule, CSEntry csentry, MVEntry mventry)
-        {
-            FlowRuleConvertFromFileTimeUtc r = (FlowRuleConvertFromFileTimeUtc)rule;
-            bool sourceValueIsPresent = r.Direction.Equals(Direction.Import) ? csentry[r.Source.Name].IsPresent : mventry[r.Source.Name].IsPresent;
-            if (sourceValueIsPresent)
-            {
-                string value = r.Source.GetValueOrDefault(r.Direction, csentry, mventry);
-                value = r.Source.Transform(value, source);
-                value = r.Target.Transform(value, source);
-                DateTime dtFileTimeUTC = DateTime.FromFileTimeUtc(long.Parse(value));
-                SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, dtFileTimeUTC.ToUniversalTime().ToString(r.Target.DateFormat));
-            }
-            else
-            {
-                switch (r.Target.ActionOnNullSource)
-                {
-                    case AttributeAction.None:
-                        throw new DeclineMappingException("No default action");
-                    case AttributeAction.Delete:
-                        DeleteTargetValue(r.Direction, csentry, mventry, r.Target.Name);
-                        break;
-                    case AttributeAction.SetDefault:
-                        SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, r.Target.DefaultValue);
-                        break;
-                    default:
-                        throw new DeclineMappingException("No default action");
-                }
-            }
+            r.Target.Transform(targetValue, traceSource);
+            r.Target.SetTargetValue(r.Direction, csentry, mventry, targetValue, traceSource);
+
+            traceSource.TraceInformation("Exit {0}", "InvokeFlowRule");
         }
         public void InvokeFlowRuleCode(ManagementAgent ma, FlowRule rule, CSEntry csentry, MVEntry mventry)
         {
+            traceSource.TraceInformation("Enter {0}", "InvokeFlowRuleCode");
             FlowRuleCode r = (FlowRuleCode)rule;
             if (r.Direction.Equals(Direction.Import))
                 ma.InvokeMapAttributesForImport(r.Name, csentry, mventry);
             else
                 ma.InvokeMapAttributesForExport(r.Name, csentry, mventry);
+            traceSource.TraceInformation("Exit {0}", "InvokeFlowRuleCode");
         }
-        public void InvokeFlowRuleSIDToString(FlowRule rule, CSEntry csentry, MVEntry mventry)
-        {
-            source.TraceInformation("Enter {0}", "InvokeRuleSIDToString");
-            FlowRuleSIDToString r = (FlowRuleSIDToString)rule;
-            bool sourceValueIsPresent = r.Direction.Equals(Direction.Import) ? csentry[r.Source.Name].IsPresent : mventry[r.Source.Name].IsPresent;
-            if (sourceValueIsPresent)
-            {
-                var sidInBytes = r.Direction.Equals(Direction.Import) ? (byte[])csentry[r.Source.Name].BinaryValue : (byte[])mventry[r.Source.Name].BinaryValue;
-                var sid = new SecurityIdentifier(sidInBytes, 0);
-                string value = r.Source.Transform(sid.ToString(), source);
-                value = r.Target.Transform(value, source);
-                SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, value);
-            }
-            else
-            {
-                switch (r.Target.ActionOnNullSource)
-                {
-                    case AttributeAction.None:
-                        throw new DeclineMappingException("No default action");
-                    case AttributeAction.Delete:
-                        DeleteTargetValue(r.Direction, csentry, mventry, r.Target.Name);
-                        break;
-                    case AttributeAction.SetDefault:
-                        SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, r.Target.DefaultValue);
-                        break;
-                    default:
-                        throw new DeclineMappingException("No default action");
-                }
-            }
-            source.TraceInformation("Exit {0}", "InvokeRuleSIDToString");
-        }
-        public void InvokeFlowRuleToString(FlowRule rule, CSEntry csentry, MVEntry mventry)
-        {
-            source.TraceInformation("Enter {0}", "InvokeFlowRuleToString");
-            FlowRuleToString r = (FlowRuleToString)rule;
-            bool sourceValueIsPresent = r.Direction.Equals(Direction.Import) ? csentry[r.Source.Name].IsPresent : mventry[r.Source.Name].IsPresent;
-            if (sourceValueIsPresent)
-            {
-                string value = r.Source.GetValueOrDefault(r.Direction, csentry, mventry);
-                value = r.Source.Transform(value, source);
-                value = r.Target.Transform(value, source);
-                SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, value);
-            }
-            else
-            {
-                switch (r.Target.ActionOnNullSource)
-                {
-                    case AttributeAction.None:
-                        throw new DeclineMappingException("No default action");
-                    case AttributeAction.Delete:
-                        DeleteTargetValue(r.Direction, csentry, mventry, r.Target.Name);
-                        break;
-                    case AttributeAction.SetDefault:
-                        SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, r.Target.DefaultValue);
-                        break;
-                    default:
-                        throw new DeclineMappingException("No default action");
-                }
-            }
-            source.TraceInformation("Exit {0}", "InvokeFlowRuleToString");
-        }
-        public void InvokeFlowRuleToNumber(FlowRule rule, CSEntry csentry, MVEntry mventry)
-        {
-            source.TraceInformation("Enter {0}", "InvokeFlowRuleToNumber");
-            FlowRuleToNumber r = (FlowRuleToNumber)rule;
-            bool sourceValueIsPresent = r.Direction.Equals(Direction.Import) ? csentry[r.Source.Name].IsPresent : mventry[r.Source.Name].IsPresent;
-            if (sourceValueIsPresent)
-            {
-                string value = r.Source.GetValueOrDefault(r.Direction, csentry, mventry);
-                value = r.Source.Transform(value, source);
-                value = r.Target.Transform(value, source);
-                SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, long.Parse(value));
-            }
-            else
-            {
-                switch (r.Target.ActionOnNullSource)
-                {
-                    case AttributeAction.None:
-                        throw new DeclineMappingException("No default action");
-                    case AttributeAction.Delete:
-                        DeleteTargetValue(r.Direction, csentry, mventry, r.Target.Name);
-                        break;
-                    case AttributeAction.SetDefault:
-                        SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, long.Parse(r.Target.DefaultValue));
-                        break;
-                    default:
-                        throw new DeclineMappingException("No default action");
-                }
-            }
-            source.TraceInformation("Exit {0}", "InvokeFlowRuleToNumber");
-        }
-        public void InvokeFlowRuleBitIsSet(FlowRule rule, CSEntry csentry, MVEntry mventry)
-        {
-            source.TraceInformation("Enter {0}", "InvokeFlowRuleBitIsSet");
-            FlowRuleBitIsSet r = (FlowRuleBitIsSet)rule;
-            bool sourceValueIsPresent = r.Direction.Equals(Direction.Import) ? csentry[r.Source.Name].IsPresent : mventry[r.Source.Name].IsPresent;
-            if (sourceValueIsPresent)
-            {
-                string value = r.Source.GetValueOrDefault(r.Direction, csentry, mventry);
-                value = r.Source.Transform(value, source);
-                value = r.Target.Transform(value, source);
-                long longValue = long.Parse(value);
-                value = ((longValue & (1 << r.BitPosition)) != 0).ToString();
-                value = r.Target.Transform(value, source);
-                SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, value);
-            }
-            else
-            {
-                switch (r.Target.ActionOnNullSource)
-                {
-                    case AttributeAction.None:
-                        throw new DeclineMappingException("No default action");
-                    case AttributeAction.Delete:
-                        DeleteTargetValue(r.Direction, csentry, mventry, r.Target.Name);
-                        break;
-                    case AttributeAction.SetDefault:
-                        SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, r.Target.DefaultValue);
-                        break;
-                    default:
-                        throw new DeclineMappingException("No default action");
-                }
-            }
-            source.TraceInformation("Exit {0}", "InvokeFlowRuleBitIsSet");
-        }
-        public void InvokeFlowRuleBitIsNotSet(FlowRule rule, CSEntry csentry, MVEntry mventry)
-        {
-            source.TraceInformation("Enter {0}", "InvokeFlowRuleBitIsNotSet");
-            FlowRuleBitIsNotSet r = (FlowRuleBitIsNotSet)rule;
-            bool sourceValueIsPresent = r.Direction.Equals(Direction.Import) ? csentry[r.Source.Name].IsPresent : mventry[r.Source.Name].IsPresent;
-            if (sourceValueIsPresent)
-            {
-                string value = r.Source.GetValueOrDefault(r.Direction, csentry, mventry);
-                value = r.Source.Transform(value, source);
-                long longValue = long.Parse(value);
-                value = ((longValue & (1 << r.BitPosition)) == 0).ToString();
-                value = r.Target.Transform(value, source);
-                SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, value);
-            }
-            else
-            {
-                switch (r.Target.ActionOnNullSource)
-                {
-                    case AttributeAction.None:
-                        throw new DeclineMappingException("No default action");
-                    case AttributeAction.Delete:
-                        DeleteTargetValue(r.Direction, csentry, mventry, r.Target.Name);
-                        break;
-                    case AttributeAction.SetDefault:
-                        SetTargetValue(r.Direction, csentry, mventry, r.Target.Name, r.Target.DefaultValue);
-                        break;
-                    default:
-                        throw new DeclineMappingException("No default action");
-                }
-            }
-            source.TraceInformation("Exit {0}", "InvokeFlowRuleBitIsNotSet");
-        }
-        #endregion
     }
 }
 
@@ -647,7 +305,6 @@ public class ManagementAgent
 
 }
 #endregion
-
 #region Conditions
 public enum EvaluateAttribute
 {
@@ -663,7 +320,7 @@ public enum ConditionOperator
     [XmlEnum(Name = "Or")]
     Or
 }
-[XmlInclude(typeof(ObjectClassMatch)), XmlInclude(typeof(SourceValueMatch)), XmlInclude(typeof(TargetValueMatch)), XmlInclude(typeof(SubCondition))]
+[XmlInclude(typeof(ObjectClassMatch)), XmlInclude(typeof(SourceValueMatch)), XmlInclude(typeof(SourceValueNotMatch)), XmlInclude(typeof(TargetValueMatch)), XmlInclude(typeof(SubCondition))]
 public class ConditionBase
 {
     [XmlAttribute("Source")]
@@ -773,6 +430,17 @@ public class SourceValueMatch : ConditionBase
         return string.IsNullOrEmpty(value) ? false : Regex.IsMatch(value, Pattern);
     }
 }
+public class SourceValueNotMatch : ConditionBase
+{
+    [XmlAttribute("Pattern")]
+    public string Pattern { get; set; }
+
+    public override bool IsMet(CSEntry csentry, MVEntry mventry, TraceSource source)
+    {
+        string value = SourceValue(csentry, mventry);
+        return string.IsNullOrEmpty(value) ? false : !Regex.IsMatch(value, Pattern);
+    }
+}
 public class TargetValueMatch : ConditionBase
 {
     [XmlAttribute("Pattern")]
@@ -847,7 +515,7 @@ public enum AttributeAction
     SetDefault
 }
 
-[XmlInclude(typeof(FlowRuleConcatenateString)), XmlInclude(typeof(FlowRuleConvertFromFileTimeUtc)), XmlInclude(typeof(FlowRuleCode)), XmlInclude(typeof(FlowRuleGUIDToString)), XmlInclude(typeof(FlowRuleSIDToString)), XmlInclude(typeof(FlowRuleToString)), XmlInclude(typeof(FlowRuleBitIsSet)), XmlInclude(typeof(FlowRuleBitIsNotSet))]
+[XmlInclude(typeof(FlowRuleCode))]
 public class FlowRule
 {
     [XmlAttribute("Name")]
@@ -860,78 +528,118 @@ public class FlowRule
     [XmlElement("Conditions")]
     public Conditions Conditions { get; set; }
 
+    [XmlElement("SourceExpression")]
+    public SourceExpression SourceExpression { get; set; }
+    [XmlElement("Target")]
+    public Attribute Target { get; set; }
+
     public FlowRule()
     {
         this.Conditions = new Conditions();
     }
 }
-public class FlowRuleConcatenateString : FlowRule
-{
-    [XmlElement("SourceList")]
-    public SourceList SourceList { get; set; }
-    public Attribute Target { get; set; }
-}
-public class FlowRuleGUIDToString : FlowRule
-{
-    public Attribute Source { get; set; }
-    public Attribute Target { get; set; }
-}
-public class FlowRuleSIDToString : FlowRule
-{
-    public Attribute Source { get; set; }
-    public Attribute Target { get; set; }
-}
 public class FlowRuleCode : FlowRule
 {
 }
-public class FlowRuleToString : FlowRule
-{
-    public Attribute Source { get; set; }
-    public Attribute Target { get; set; }
-}
-public class FlowRuleToNumber : FlowRule
-{
-    public Attribute Source { get; set; }
-    public Attribute Target { get; set; }
-}
-public class FlowRuleConvertFromFileTimeUtc : FlowRule
-{
-    [XmlElement("Source")]
-    public Attribute Source { get; set; }
 
-    [XmlElement("Target")]
-    public Attribute Target { get; set; }
-}
-public class FlowRuleBitIsSet : FlowRule
-{
-    [XmlElement("BitPosition")]
-    public int BitPosition { get; set; }
-
-    [XmlElement("Source")]
-    public Attribute Source { get; set; }
-
-    [XmlElement("Target")]
-    public Attribute Target { get; set; }
-}
-public class FlowRuleBitIsNotSet : FlowRule
-{
-    [XmlElement("BitPosition")]
-    public int BitPosition { get; set; }
-
-    [XmlElement("Source")]
-    public Attribute Source { get; set; }
-
-    [XmlElement("Target")]
-    public Attribute Target { get; set; }
-}
 #endregion
 #region Transforms
-[XmlInclude(typeof(ToUpper)), XmlInclude(typeof(ToLower)), XmlInclude(typeof(Trim)), XmlInclude(typeof(TrimEnd)), XmlInclude(typeof(TrimStart)), XmlInclude(typeof(Replace)), XmlInclude(typeof(PadLeft)), XmlInclude(typeof(PadRight)), XmlInclude(typeof(RegexReplace)), XmlInclude(typeof(Substring)), XmlInclude(typeof(RegexSelect))]
+[XmlInclude(typeof(ToUpper)), XmlInclude(typeof(ToLower)), XmlInclude(typeof(Trim)), XmlInclude(typeof(TrimEnd)), XmlInclude(typeof(TrimStart)), XmlInclude(typeof(Replace)), XmlInclude(typeof(PadLeft)), XmlInclude(typeof(PadRight)), XmlInclude(typeof(RegexReplace)), XmlInclude(typeof(Substring)), XmlInclude(typeof(RegexSelect)), XmlInclude(typeof(FormatDate)), XmlInclude(typeof(Base64ToGUID)), XmlInclude(typeof(IsBitSet)), XmlInclude(typeof(IsBitNotSet)), XmlInclude(typeof(SIDToString)), XmlInclude(typeof(SetBit))]
 public abstract class Transform
 {
     public abstract string Convert(string value);
 }
+public class Base64ToGUID : Transform
+{
+    public override string Convert(string value)
+    {
+        Guid guid = new Guid(System.Convert.FromBase64String(value));
+        return guid.ToString();
+    }
+}
 
+public enum SecurityIdentifierType
+{
+    [XmlEnum(Name = "AccountSid")]
+    AccountSid,
+    [XmlEnum(Name = "AccountDomainSid")]
+    AccountDomainSid
+}
+public class SIDToString : Transform
+{
+    [XmlAttribute("SIDType")]
+    [XmlTextAttribute()]
+    public SecurityIdentifierType SIDType { get; set; }
+
+    public override string Convert(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        var sidInBytes = System.Convert.FromBase64String(value);
+        var sid = new SecurityIdentifier(sidInBytes, 0);
+        value = SIDType.Equals(SecurityIdentifierType.AccountSid) ? sid.Value : sid.AccountDomainSid.Value;
+        return value;
+    }
+}
+public class IsBitSet : Transform
+{
+    [XmlAttribute("BitPosition")]
+    public int BitPosition { get; set; }
+
+    public override string Convert(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        long longValue = long.Parse(value);
+        value = ((longValue & (1 << this.BitPosition)) != 0).ToString();
+        return value;
+    }
+}
+public class IsBitNotSet : Transform
+{
+    [XmlAttribute("BitPosition")]
+    public int BitPosition { get; set; }
+
+    public override string Convert(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        long longValue = long.Parse(value);
+        value = ((longValue & (1 << this.BitPosition)) == 0).ToString();
+        return value;
+    }
+}
+public class SetBit : Transform
+{
+    [XmlAttribute("BitPosition")]
+    public int BitPosition { get; set; }
+
+    [XmlAttribute("Value")]
+    public bool Value { get; set; }
+
+    private int SetBitAt(int value, int index)
+    {
+        if (index < 0 || index >= sizeof(long) * 8)
+        {
+            throw new ArgumentOutOfRangeException();
+        }
+
+        return value | (1 << index);
+    }
+    private int UnsetBitAt(int value, int index)
+    {
+        if (index < 0 || index >= sizeof(int) * 8)
+        {
+            throw new ArgumentOutOfRangeException();
+        }
+
+        return value & ~(1 << index);
+    }
+    public override string Convert(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        int val = int.Parse(value);
+        val = this.Value ? SetBitAt(val, BitPosition) : UnsetBitAt(val, BitPosition);
+        return val.ToString();
+    }
+}
 public class ToUpper : Transform
 {
     public override string Convert(string value)
@@ -988,6 +696,7 @@ public class PadLeft : Transform
 
     public override string Convert(string value)
     {
+        PaddingChar = string.IsNullOrEmpty(PaddingChar) ? " " : PaddingChar;
         return string.IsNullOrEmpty(value) ? value : value.PadLeft(TotalWidth, PaddingChar[0]);
     }
 }
@@ -1022,9 +731,9 @@ public class Substring : Transform
     [XmlAttribute("Length")]
     public int Length { get; set; }
 
-    public override string Convert(string text)
+    public override string Convert(string value)
     {
-        return text.Length <= StartIndex ? "" : text.Length - StartIndex <= Length ? text.Substring(StartIndex) : text.Substring(StartIndex, Length);
+        return value.Length <= StartIndex ? "" : value.Length - StartIndex <= Length ? value.Substring(StartIndex) : value.Substring(StartIndex, Length);
     }
 }
 public class RegexSelect : Transform
@@ -1034,11 +743,46 @@ public class RegexSelect : Transform
         throw new NotImplementedException();
     }
 }
+public enum DateType
+{
+    [XmlEnum(Name = "DateTime")]
+    DateTime,
+    [XmlEnum(Name = "FileTimeUTC")]
+    FileTimeUTC
+}
+public class FormatDate : Transform
+{
+    [XmlAttribute("DateType")]
+    [XmlTextAttribute()]
+    public DateType DateType { get; set; }
+
+    [XmlAttribute("FromFormat")]
+    public string FromFormat { get; set; }
+    [XmlAttribute("ToFormat")]
+    public string ToFormat { get; set; }
+
+    public override string Convert(string text)
+    {
+        string returnValue = text;
+        if (DateType.Equals(DateType.FileTimeUTC))
+        {
+            returnValue = DateTime.FromFileTimeUtc(long.Parse(text)).ToString(ToFormat);
+            return returnValue;
+        }
+        if (DateType.Equals(DateType.FileTimeUTC))
+        {
+            returnValue = DateTime.ParseExact(text, FromFormat, CultureInfo.InvariantCulture).ToString(ToFormat);
+            return returnValue;
+        }
+        return returnValue;
+    }
+}
 public class Transforms
 {
     [XmlElement("Transform")]
     public List<Transform> Transform { get; set; }
 }
+
 #endregion
 #region Source
 [XmlInclude(typeof(Attribute)), XmlInclude(typeof(Constant))]
@@ -1050,9 +794,6 @@ public class Value
     [XmlAttribute("ActionOnNullSource")]
     [XmlTextAttribute()]
     public AttributeAction ActionOnNullSource { get; set; }
-
-    [XmlAttribute("DateFormat")]
-    public string DateFormat { get; set; }
 
     [XmlElement("Transforms")]
     public Transforms Transforms { get; set; }
@@ -1083,7 +824,7 @@ public class Attribute : Value
     [XmlAttribute("Name")]
     public string Name { get; set; }
 
-    public string GetValueOrDefault(Direction direction, CSEntry csentry, MVEntry mventry)
+    public string GetValueOrDefault(Direction direction, CSEntry csentry, MVEntry mventry, TraceSource traceSource)
     {
         string value = this.DefaultValue;
         bool sourceValueIsPresent = false;
@@ -1135,13 +876,48 @@ public class Attribute : Value
         }
         return value;
     }
+    public void SetTargetValue(Direction direction, CSEntry csentry, MVEntry mventry, string Value, TraceSource traceSource)
+    {
+        AttributeType at = direction.Equals(Direction.Import) ? mventry[this.Name].DataType : csentry[this.Name].DataType;
+        traceSource.TraceInformation("Target attribute type: {0}", at);
+        if (string.IsNullOrEmpty(Value))
+        {
+            switch (this.ActionOnNullSource)
+            {
+                case AttributeAction.None:
+                    throw new DeclineMappingException("No default action");
+                case AttributeAction.Delete:
+                    if (direction.Equals(Direction.Import))
+                        mventry[this.Name].Delete();
+                    else
+                        csentry[this.Name].Delete();
+                    break;
+                case AttributeAction.SetDefault:
+                    if (direction.Equals(Direction.Import))
+                        mventry[this.Name].Value = this.DefaultValue;
+                    else
+                        csentry[this.Name].Value = this.DefaultValue;
+                    break;
+                default:
+                    throw new DeclineMappingException("No default action");
+            }
+        }
+        else
+        {
+            if (direction.Equals(Direction.Import))
+                mventry[this.Name].Value = Value;
+            else
+                csentry[this.Name].Value = Value;
+        }
+    }
+
 }
 public class Constant : Value
 {
     [XmlAttribute("Value")]
     public string Value { get; set; }
 }
-public class SourceList
+public class SourceExpression
 {
     [XmlElement("Source")]
     public List<Value> Source { get; set; }

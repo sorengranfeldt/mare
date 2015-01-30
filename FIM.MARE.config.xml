@@ -4,7 +4,7 @@
     <XmlFile Name="CountryCodes" Path="C:\temp\CountryCodes.xml" />
   </ExternalFiles>
   <ManagementAgent Name="inceptio.local">
-    <FlowRule Name="AccountName" Direction="Export" xsi:type="FlowRuleToString">
+    <FlowRule Name="AccountName" Direction="Export" xsi:type="FlowRule">
       <Conditions Operator="Or">
         <Condition xsi:type="ObjectClassMatch" Source="CSEntry" Target="MVEntry" Pattern="^group" />
         <Condition xsi:type="SubCondition" Operator="And">
@@ -12,25 +12,67 @@
           <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="sn" Pattern="^Petersen$" />
         </Condition>
       </Conditions>
-      <Source Name="AccountName">
-        <Transforms>
-          <Transform xsi:type="ToUpper"/>
-        </Transforms>
-      </Source>
+      <SourceExpression>
+        <Source Name="AccountName" xsi:type="Attribute">
+          <Transforms>
+            <Transform xsi:type="ToUpper"/>
+          </Transforms>
+        </Source>
+      </SourceExpression>
       <Target Name="sAMAccountName" ActionOnNullSource="None" />
     </FlowRule>
 
-    <FlowRule Name="IsActive" Direction="Import" xsi:type="FlowRuleBitIsNotSet">
-      <BitPosition>1</BitPosition>
-      <Source Name="userAccountControl"/>
+    <FlowRule Name="AccountSidToString" Direction="Import" xsi:type="FlowRule">
+      <SourceExpression>
+        <Source Name="objectSid" xsi:type="Attribute">
+          <Transforms>
+            <Transform xsi:type="SIDToString" SIDType="AccountSid" />
+          </Transforms>
+        </Source>
+      </SourceExpression>
+      <Target Name="objectSidAsString" ActionOnNullSource="Delete" />
+    </FlowRule>
+
+    <FlowRule Name="GUIDToString" Direction="Import" xsi:type="FlowRule">
+      <SourceExpression>
+        <Source Name="objectGUID" xsi:type="Attribute">
+          <Transforms>
+            <Transform xsi:type="Base64ToGUID" />
+          </Transforms>
+        </Source>
+      </SourceExpression>
+      <Target Name="objectGuidAsString" ActionOnNullSource="Delete" />
+    </FlowRule>
+
+    <FlowRule Name="LastLogonTime" Direction="Import" xsi:type="FlowRule">
+      <SourceExpression>
+        <Source Name="lastLogonTimeStamp" xsi:type="Attribute">
+          <Transforms>
+            <Transform xsi:type="FormatDate" DateType="FileTimeUTC" ToFormat="yyyy-MM-dd hh:MM:ss"/>
+          </Transforms>
+        </Source>
+      </SourceExpression>
+      <Target Name="lastLogonTime" ActionOnNullSource="Delete" />
+    </FlowRule>
+
+    <FlowRule Name="IsActive" Direction="Import" xsi:type="FlowRule">
+      <SourceExpression>
+        <Source Name="userAccountControl" xsi:type="Attribute">
+          <Transforms>
+            <Transform xsi:type="IsBitNotSet" BitPosition="1"/>
+          </Transforms>
+        </Source>
+      </SourceExpression>
       <Target Name="isActive" ActionOnNullSource="Delete" />
     </FlowRule>
 
-    <FlowRule Name="IsActiveText" Direction="Import" xsi:type="FlowRuleBitIsSet">
-      <BitPosition>1</BitPosition>
-      <Source Name="userAccountControl"/>
+    <FlowRule Name="IsActiveText" Direction="Import" xsi:type="FlowRule">
+      <SourceExpression>
+        <Source Name="userAccountControl" xsi:type="Attribute"/>
+      </SourceExpression>
       <Target Name="isActiveText" ActionOnNullSource="Delete">
         <Transforms>
+          <Transform xsi:type="IsBitSet" BitPosition="1"/>
           <Transform xsi:type="Replace" OldValue="True" NewValue="Inactive"/>
           <Transform xsi:type="Replace" OldValue="False" NewValue="Active"/>
         </Transforms>
@@ -50,18 +92,18 @@
       <Target xsi:type="Attribute" Name="objectSidAsString"/>
     </FlowRule>-->
 <!--<FlowRule Name="DisplayName" Direction="Import" xsi:type="FlowRuleConcatenateString">
-      <SourceList>
+      <SourceExpression>
         <Source xsi:type="Attribute" Name="givenName" ConvertToUppercase="true" Trim="false" />
         <Source xsi:type="Constant" Value=" "/>
         <Source xsi:type="Attribute" Name="sn"/>
-      </SourceList>
+      </SourceExpression>
       <Target xsi:type="Attribute" Name="description"/>
     </FlowRule>-->
 <!--<FlowRule Name="Company" Direction="Export" xsi:type="FlowRuleConcatenateString">
-      <SourceList>
+      <SourceExpression>
         <Source xsi:type="Constant" Value="Goverco"/>
         <Source xsi:type="Constant" Value="ApS"/>
-      </SourceList>
+      </SourceExpression>
       <Target xsi:type="Attribute" Name="Company"/>
     </FlowRule>-->
 <!--<FlowRule Name="lastLogonTimeStamp" Direction="Import" xsi:type="FlowRuleConvertFromFileTimeUtc">
