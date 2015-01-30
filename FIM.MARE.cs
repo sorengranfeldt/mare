@@ -180,7 +180,7 @@ namespace FIM.MARE
                     continue;
                 }
             }
-            r.Target.Transform(targetValue, traceSource);
+            targetValue = r.Target.Transform(targetValue, traceSource);
             r.Target.SetTargetValue(r.Direction, csentry, mventry, targetValue, traceSource);
 
             traceSource.TraceInformation("Exit {0}", "InvokeFlowRule");
