@@ -4,23 +4,23 @@
     <XmlFile Name="CountryCodes" Path="C:\temp\CountryCodes.xml" />
   </ExternalFiles>
   <ManagementAgent Name="inceptio.local">
-    <FlowRule Name="AccountName" Direction="Export" xsi:type="FlowRule">
-      <Conditions Operator="Or">
-        <Condition xsi:type="ObjectClassMatch" Source="CSEntry" Target="MVEntry" Pattern="^group" />
-        <Condition xsi:type="SubCondition" Operator="And">
-          <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="givenName" Pattern="^Risto|Robert$" />
-          <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="sn" Pattern="^Petersen$" />
-        </Condition>
-      </Conditions>
-      <SourceExpression>
-        <Source Name="AccountName" xsi:type="Attribute">
-          <Transforms>
-            <Transform xsi:type="ToUpper"/>
-          </Transforms>
-        </Source>
-      </SourceExpression>
-      <Target Name="sAMAccountName" ActionOnNullSource="None" />
-    </FlowRule>
+<FlowRule Name="AccountName" Direction="Export" xsi:type="FlowRule">
+  <Conditions Operator="Or">
+    <Condition xsi:type="ObjectClassMatch" Source="CSEntry" Target="MVEntry" Pattern="^person" />
+    <Condition xsi:type="SubCondition" Operator="And">
+      <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="company" Pattern="^Sales|Purchase$" />
+      <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="city" Pattern="^Beijing|New York$" />
+    </Condition>
+  </Conditions>
+  <SourceExpression>
+    <Source Name="AccountName" xsi:type="Attribute">
+      <Transforms>
+        <Transform xsi:type="ToUpper"/>
+      </Transforms>
+    </Source>
+  </SourceExpression>
+  <Target Name="sAMAccountName" ActionOnNullSource="None" />
+</FlowRule>
 
     <FlowRule Name="AccountSidToString" Direction="Import" xsi:type="FlowRule">
       <SourceExpression>
