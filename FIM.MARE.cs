@@ -10,6 +10,8 @@
 //  -added support for copying and renaming DLL and reading corresponding configuration file
 // jan 29, 2015 | soren granfeldt
 //  -reduced number of rules and made more generic by moving fuctionality to Transforms instead
+// feb 4, 2015 | soren granfeldt
+//  -fixed bug in date conversion transform
 
 using Microsoft.MetadirectoryServices;
 using Microsoft.Win32;
@@ -29,18 +31,6 @@ using System.Text.RegularExpressions;
 using System.Xml.Serialization;
 using System.Xml.XPath;
 
-/*
-<source name"HomeDirServer">
-<Transforms>
-	<Transform xsi:type="Trim"/>
-	<Transform xsi:type="RegExReplace" Pattern="^[a-z]" Replacement=""/>
-	<Transform xsi:type="RegExSelect"/>
-		<Item Pattern="001|003" Value="Server1" />
-		<Item Pattern="002" Value="Server2" />
-	</Transform>
-</Transforms>
-</source>
- */
 namespace FIM.MARE
 {
     public class RulesExtension : IMASynchronization
@@ -769,7 +759,7 @@ public class FormatDate : Transform
             returnValue = DateTime.FromFileTimeUtc(long.Parse(text)).ToString(ToFormat);
             return returnValue;
         }
-        if (DateType.Equals(DateType.FileTimeUTC))
+        if (DateType.Equals(DateType.DateTime))
         {
             returnValue = DateTime.ParseExact(text, FromFormat, CultureInfo.InvariantCulture).ToString(ToFormat);
             return returnValue;

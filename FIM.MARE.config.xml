@@ -4,23 +4,23 @@
     <XmlFile Name="CountryCodes" Path="C:\temp\CountryCodes.xml" />
   </ExternalFiles>
   <ManagementAgent Name="inceptio.local">
-<FlowRule Name="AccountName" Direction="Export" xsi:type="FlowRule">
-  <Conditions Operator="Or">
-    <Condition xsi:type="ObjectClassMatch" Source="CSEntry" Target="MVEntry" Pattern="^person" />
-    <Condition xsi:type="SubCondition" Operator="And">
-      <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="company" Pattern="^Sales|Purchase$" />
-      <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="city" Pattern="^Beijing|New York$" />
-    </Condition>
-  </Conditions>
-  <SourceExpression>
-    <Source Name="AccountName" xsi:type="Attribute">
-      <Transforms>
-        <Transform xsi:type="ToUpper"/>
-      </Transforms>
-    </Source>
-  </SourceExpression>
-  <Target Name="sAMAccountName" ActionOnNullSource="None" />
-</FlowRule>
+    <FlowRule Name="AccountName" Direction="Export" xsi:type="FlowRule">
+      <Conditions Operator="Or">
+        <Condition xsi:type="ObjectClassMatch" Source="CSEntry" Pattern="^person$" />
+<Condition xsi:type="SubCondition" Operator="And">
+  <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="company" Pattern="^Sales|Purchase$" />
+  <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="city" Pattern="^Beijing|New York$" />
+</Condition>
+      </Conditions>
+      <SourceExpression>
+        <Source Name="AccountName" xsi:type="Attribute">
+          <Transforms>
+            <Transform xsi:type="ToUpper"/>
+          </Transforms>
+        </Source>
+      </SourceExpression>
+      <Target Name="sAMAccountName" ActionOnNullSource="None" />
+    </FlowRule>
 
     <FlowRule Name="AccountSidToString" Direction="Import" xsi:type="FlowRule">
       <SourceExpression>
@@ -80,72 +80,4 @@
     </FlowRule>
   </ManagementAgent>
 </Rules>
-
-<!--<CustomDLL>sample.custom.rulesextension.dll</CustomDLL>-->
-<!--<FlowRule Name="City" Direction="Import" xsi:type="FlowRuleCode"/>-->
-<!--<FlowRule Name="ObjectGuidToString" Direction="Import" xsi:type="FlowRuleGUIDToString">
-      <Source xsi:type="Attribute" Name="objectGUID"/>
-      <Target xsi:type="Attribute" Name="objectGuidAsString"/>
-    </FlowRule>-->
-<!--<FlowRule Name="ObjectSidToString" Direction="Import" xsi:type="FlowRuleSIDToString">
-      <Source xsi:type="Attribute" Name="objectSid"/>
-      <Target xsi:type="Attribute" Name="objectSidAsString"/>
-    </FlowRule>-->
-<!--<FlowRule Name="DisplayName" Direction="Import" xsi:type="FlowRuleConcatenateString">
-      <SourceExpression>
-        <Source xsi:type="Attribute" Name="givenName" ConvertToUppercase="true" Trim="false" />
-        <Source xsi:type="Constant" Value=" "/>
-        <Source xsi:type="Attribute" Name="sn"/>
-      </SourceExpression>
-      <Target xsi:type="Attribute" Name="description"/>
-    </FlowRule>-->
-<!--<FlowRule Name="Company" Direction="Export" xsi:type="FlowRuleConcatenateString">
-      <SourceExpression>
-        <Source xsi:type="Constant" Value="Goverco"/>
-        <Source xsi:type="Constant" Value="ApS"/>
-      </SourceExpression>
-      <Target xsi:type="Attribute" Name="Company"/>
-    </FlowRule>-->
-<!--<FlowRule Name="lastLogonTimeStamp" Direction="Import" xsi:type="FlowRuleConvertFromFileTimeUtc">
-      <Source Name="lastLogonTimeStamp"/>
-      <Target Name="adLastLoginTimeStamp" ActionOnNullSource="Delete" DateFormat="yyyy-MM-ddThh:mm:ss.000"/>
-    </FlowRule>-->
-<!--<FlowRule Name="PasswordLastSet" Direction="Import" xsi:type="FlowRuleConvertFromFileTimeUtc">
-      <Source Name="pwdLastSet"/>
-      <Target Name="adPasswordLastSet" ActionOnNullSource="Delete" DateFormat="yyyy-MM-ddThh:mm:ss"/>
-    </FlowRule>-->
-
-
-<!--<FlowRule Name="UACAsString" Direction="Import" xsi:type="FlowRuleToString">
-      <Source Name="displayName">
-        <Transforms>
-          <Transform xsi:type="ToUpper"/>
-          <Transform xsi:type="ToLower"/>
-        </Transforms>
-      </Source>
-      <Target Name="description" ActionOnNullSource="SetDefault" />
-    </FlowRule>
-
-    <FlowRule Name="UACAsString" Direction="Export" xsi:type="FlowRuleToString">
-      <Source Name="displayName">
-        <Transforms>
-          <Transform xsi:type="Trim"/>
-          <Transform xsi:type="TrimEnd"/>
-          <Transform xsi:type="TrimStart"/>
-          <Transform xsi:type="ToUpper"/>
-          <Transform xsi:type="ToLower"/>
-          <Transform xsi:type="RegexReplace" Pattern=" " Replacement=""/>
-          <Transform xsi:type="Substring" StartIndex="1" Length="5"/>
-          <Transform xsi:type="Replace" OldValue="tis" NewValue="Pis"/>
-          <Transform xsi:type="PadLeft" TotalWidth="8" PaddingChar="#"/>
-          <Transform xsi:type="PadRight" TotalWidth="8" PaddingChar="#"/>
-        </Transforms>
-      </Source>
-      <Target Name="description" ActionOnNullSource="Delete" />
-    </FlowRule>-->
-
-<!--<FlowRule Name="SIPEnabled" Direction="Import" xsi:type="FlowRuleToString">
-      <Source Name="msRTCSIP-UserEnabled"/>
-      <Target Name="isSIPEnabledAsString" ActionOnNullSource="Delete" />
-    </FlowRule>-->
 
