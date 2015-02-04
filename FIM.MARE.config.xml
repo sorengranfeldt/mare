@@ -7,10 +7,10 @@
     <FlowRule Name="AccountName" Direction="Export" xsi:type="FlowRule">
       <Conditions Operator="Or">
         <Condition xsi:type="ObjectClassMatch" Source="CSEntry" Pattern="^person$" />
-<Condition xsi:type="SubCondition" Operator="And">
-  <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="company" Pattern="^Sales|Purchase$" />
-  <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="city" Pattern="^Beijing|New York$" />
-</Condition>
+        <Condition xsi:type="SubCondition" Operator="And">
+          <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="company" Pattern="^Sales|Purchase$" />
+          <Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="city" Pattern="^Beijing|New York$" />
+        </Condition>
       </Conditions>
       <SourceExpression>
         <Source Name="AccountName" xsi:type="Attribute">
