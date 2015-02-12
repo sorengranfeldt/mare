@@ -18,7 +18,7 @@
             <Transform xsi:type="ToUpper"/>
           </Transforms>
         </Source>
-      </SourceExpression>
+      </SourceExpression> 
       <Target Name="sAMAccountName" ActionOnNullSource="None" />
     </FlowRule>
 
@@ -32,6 +32,30 @@
       </SourceExpression>
       <Target Name="objectSidAsString" ActionOnNullSource="Delete" />
     </FlowRule>
+
+
+    <FlowRule Name="ManagerEMail" Direction="Export" xsi:type="FlowRule">
+      <SourceExpression>
+        <Source Name="managerAsString" xsi:type="Attribute">
+          <Transforms>
+            <Transform xsi:type="LookupMVValue" LookupAttributeName="accountName" ExtractValueFromAttribute="mail" />
+          </Transforms>
+        </Source>
+      </SourceExpression>
+      <Target Name="description" ActionOnNullSource="Delete" />
+    </FlowRule>
+
+    <FlowRule Name="ManagerFromString" Direction="Export" xsi:type="FlowRule">
+      <SourceExpression>
+        <Source Name="managerAsString" xsi:type="Attribute">
+          <Transforms>
+            <Transform xsi:type="LookupMVValue" LookupAttributeName="accountName" ExtractValueFromAttribute="[DN]" MAName="inceptio.local"/>
+          </Transforms>
+        </Source>
+      </SourceExpression>
+      <Target Name="manager" ActionOnNullSource="Delete" />
+    </FlowRule>
+
 
     <FlowRule Name="GUIDToString" Direction="Import" xsi:type="FlowRule">
       <SourceExpression>

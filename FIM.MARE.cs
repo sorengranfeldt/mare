@@ -534,7 +534,7 @@ public class FlowRuleCode : FlowRule
 
 #endregion
 #region Transforms
-[XmlInclude(typeof(ToUpper)), XmlInclude(typeof(ToLower)), XmlInclude(typeof(Trim)), XmlInclude(typeof(TrimEnd)), XmlInclude(typeof(TrimStart)), XmlInclude(typeof(Replace)), XmlInclude(typeof(PadLeft)), XmlInclude(typeof(PadRight)), XmlInclude(typeof(RegexReplace)), XmlInclude(typeof(Substring)), XmlInclude(typeof(RegexSelect)), XmlInclude(typeof(FormatDate)), XmlInclude(typeof(Base64ToGUID)), XmlInclude(typeof(IsBitSet)), XmlInclude(typeof(IsBitNotSet)), XmlInclude(typeof(SIDToString)), XmlInclude(typeof(SetBit))]
+[XmlInclude(typeof(ToUpper)), XmlInclude(typeof(ToLower)), XmlInclude(typeof(Trim)), XmlInclude(typeof(TrimEnd)), XmlInclude(typeof(TrimStart)), XmlInclude(typeof(Replace)), XmlInclude(typeof(PadLeft)), XmlInclude(typeof(PadRight)), XmlInclude(typeof(RegexReplace)), XmlInclude(typeof(Substring)), XmlInclude(typeof(RegexSelect)), XmlInclude(typeof(FormatDate)), XmlInclude(typeof(Base64ToGUID)), XmlInclude(typeof(IsBitSet)), XmlInclude(typeof(IsBitNotSet)), XmlInclude(typeof(SIDToString)), XmlInclude(typeof(SetBit)), XmlInclude(typeof(LookupMVValue))]
 public abstract class Transform
 {
     public abstract string Convert(string value);
@@ -570,6 +570,37 @@ public class SIDToString : Transform
         return value;
     }
 }
+
+public class LookupMVValue : Transform
+{
+    [XmlAttribute("LookupAttributeName")]
+    public string LookupAttributeName { get; set; }
+
+    [XmlAttribute("ExtractValueFromAttribute")]
+    public string ExtractValueFromAttribute { get; set; }
+
+    [XmlAttribute("MAName")]
+    public string MAName { get; set; }
+
+    public override string Convert(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        MVEntry mventry = Utils.FindMVEntries(LookupAttributeName, value, 1).FirstOrDefault();
+        if (mventry != null)
+        {
+            if (this.ExtractValueFromAttribute.Equals("[DN]"))
+            {
+                value = mventry.ConnectedMAs[MAName].Connectors.ByIndex[0].DN.ToString();
+            }
+            else
+            {
+                value = mventry[ExtractValueFromAttribute].IsPresent ? mventry[ExtractValueFromAttribute].Value : null;
+            }
+        }
+        return value;
+    }
+}
+
 public class IsBitSet : Transform
 {
     [XmlAttribute("BitPosition")]
@@ -895,9 +926,31 @@ public class Attribute : Value
         else
         {
             if (direction.Equals(Direction.Import))
-                mventry[this.Name].Value = Value;
+            {
+                if (at == AttributeType.Reference)
+                {
+                    throw new NotSupportedException("Cannot import to reference");
+                }
+                else
+                {
+                    mventry[this.Name].Value = Value;
+                }
+            }
             else
-                csentry[this.Name].Value = Value;
+            {
+                switch (at)
+                {
+                    case AttributeType.Reference:
+                        csentry[this.Name].ReferenceValue = csentry.MA.CreateDN(Value);
+                        break;
+                    case AttributeType.Integer:
+                        csentry[this.Name].IntegerValue = long.Parse(Value);
+                        break;
+                    default:
+                        csentry[this.Name].Value = Value;
+                        break;
+                }
+            }
         }
     }
 
