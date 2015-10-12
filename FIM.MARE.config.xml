@@ -18,7 +18,7 @@
             <Transform xsi:type="ToUpper"/>
           </Transforms>
         </Source>
-      </SourceExpression> 
+      </SourceExpression>
       <Target Name="sAMAccountName" ActionOnNullSource="None" />
     </FlowRule>
 

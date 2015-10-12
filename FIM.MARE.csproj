@@ -87,6 +87,14 @@
     <Compile Include="FIM.MARE.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Model\Conditions.cs" />
+    <Compile Include="Model\Configuration.cs" />
+    <Compile Include="Model\ConfigurationManager.cs" />
+    <Compile Include="Model\ExternalFiles.cs" />
+    <Compile Include="Model\FlowRules.cs" />
+    <Compile Include="Model\ManagementAgent.cs" />
+    <Compile Include="Model\Source.cs" />
+    <Compile Include="Model\Transforms.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="FIM.MARE.config.xml">
@@ -95,6 +103,7 @@
     </Content>
     <Content Include="Microsoft.MetadirectoryServicesEx.dll" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PreBuildEvent />
