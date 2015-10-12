@@ -14,27 +14,15 @@
 //  -fixed bug in date conversion transform
 // feb 12, 2015 | soren granfeldt
 //  -added transform LookupMVValue
-// feb 12, 2015 | soren granfeldt
+// oct 12, 2015 | soren granfeldt
 //	-removed trace source and replaced with built-in trace
 
-using FIM.MARE;
 using Microsoft.MetadirectoryServices;
-using Microsoft.Win32;
 using System;
-using System.CodeDom.Compiler;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.Eventing;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Security.Principal;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Xml.Serialization;
-using System.Xml.XPath;
 
 namespace FIM.MARE
 {
@@ -258,8 +246,3 @@ namespace FIM.MARE
 		}
 	}
 }
-
-
-#region Source
-
-#endregion

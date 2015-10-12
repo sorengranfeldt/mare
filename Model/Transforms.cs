@@ -4,14 +4,31 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Security.Principal;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Xml.Serialization;
 
 namespace FIM.MARE
 {
-	[XmlInclude(typeof(ToUpper)), XmlInclude(typeof(ToLower)), XmlInclude(typeof(Trim)), XmlInclude(typeof(TrimEnd)), XmlInclude(typeof(TrimStart)), XmlInclude(typeof(Replace)), XmlInclude(typeof(PadLeft)), XmlInclude(typeof(PadRight)), XmlInclude(typeof(RegexReplace)), XmlInclude(typeof(Substring)), XmlInclude(typeof(RegexSelect)), XmlInclude(typeof(FormatDate)), XmlInclude(typeof(Base64ToGUID)), XmlInclude(typeof(IsBitSet)), XmlInclude(typeof(IsBitNotSet)), XmlInclude(typeof(SIDToString)), XmlInclude(typeof(SetBit)), XmlInclude(typeof(LookupMVValue))]
+	[
+		XmlInclude(typeof(ToUpper)),
+		XmlInclude(typeof(ToLower)),
+		XmlInclude(typeof(Trim)),
+		XmlInclude(typeof(TrimEnd)), 
+		XmlInclude(typeof(TrimStart)), 
+		XmlInclude(typeof(Replace)), 
+		XmlInclude(typeof(PadLeft)), 
+		XmlInclude(typeof(PadRight)), 
+		XmlInclude(typeof(RegexReplace)), 
+		XmlInclude(typeof(Substring)), 
+		XmlInclude(typeof(RegexSelect)), 
+		XmlInclude(typeof(FormatDate)), 
+		XmlInclude(typeof(Base64ToGUID)), 
+		XmlInclude(typeof(IsBitSet)), 
+		XmlInclude(typeof(IsBitNotSet)), 
+		XmlInclude(typeof(SIDToString)), 
+		XmlInclude(typeof(SetBit)), 
+		XmlInclude(typeof(LookupMVValue))
+	]
 	public abstract class Transform
 	{
 		public abstract string Convert(string value);

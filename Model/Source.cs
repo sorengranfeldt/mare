@@ -2,9 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Serialization;
 
 namespace FIM.MARE
@@ -24,21 +21,35 @@ namespace FIM.MARE
 
 		public string Transform(string value)
 		{
-			if (this.Transforms != null)
+			Trace.TraceInformation("enter-transform");
+			Trace.Indent();
+			try
 			{
-				Trace.TraceInformation("Transforming value: '{0}'", value);
-				foreach (Transform t in Transforms.Transform)
+				if (this.Transforms != null)
 				{
-					Trace.TraceInformation("Input[{0}]: '{1}'", t.GetType(), value);
-					value = t.Convert(value);
-					Trace.TraceInformation("Output[{0}]: '{1}'", t.GetType(), value);
+					foreach (Transform t in Transforms.Transform)
+					{
+						Trace.TraceInformation("input[{0}]: '{1}'", t.GetType(), value);
+						value = t.Convert(value);
+						Trace.TraceInformation("output[{0}]: '{1}'", t.GetType(), value);
+					}
 				}
+				else
+				{
+					Trace.TraceInformation("no-transforms");
+				}
+				Trace.TraceInformation("return-value: '{0}'", value);
 			}
-			else
+			catch (Exception ex)
 			{
-				Trace.TraceInformation("No transform entries");
+				Trace.TraceError("transform {0}", ex.GetBaseException());
+				throw;
 			}
-			Trace.TraceInformation("Returning value: '{0}'", value);
+			finally
+			{
+				Trace.Unindent();
+				Trace.TraceInformation("exit-transform");
+			}
 			return value;
 		}
 
@@ -91,7 +102,7 @@ namespace FIM.MARE
 							value = mventry.ObjectType;
 							break;
 						case "[RDN]":
-							throw new Exception("[RDN] is not valid on MVEntry");
+							throw new NotSupportedException("[RDN] is not valid on MVEntry");
 						default:
 							value = mventry[Name].Value;
 							break;
@@ -103,13 +114,13 @@ namespace FIM.MARE
 		public void SetTargetValue(Direction direction, CSEntry csentry, MVEntry mventry, string Value)
 		{
 			AttributeType at = direction.Equals(Direction.Import) ? mventry[this.Name].DataType : csentry[this.Name].DataType;
-			Trace.TraceInformation("Target attribute type: {0}", at);
+			Trace.TraceInformation("target-attribute-type: {0}", at);
 			if (string.IsNullOrEmpty(Value))
 			{
 				switch (this.ActionOnNullSource)
 				{
 					case AttributeAction.None:
-						throw new DeclineMappingException("No default action");
+						throw new DeclineMappingException("no-default-action");
 					case AttributeAction.Delete:
 						if (direction.Equals(Direction.Import))
 							mventry[this.Name].Delete();
@@ -123,7 +134,7 @@ namespace FIM.MARE
 							csentry[this.Name].Value = this.DefaultValue;
 						break;
 					default:
-						throw new DeclineMappingException("No default action");
+						throw new DeclineMappingException("no-default-action");
 				}
 			}
 			else
@@ -132,7 +143,7 @@ namespace FIM.MARE
 				{
 					if (at == AttributeType.Reference)
 					{
-						throw new NotSupportedException("Cannot import to reference");
+						throw new NotSupportedException("cannot-import-to-reference");
 					}
 					else
 					{
@@ -156,7 +167,6 @@ namespace FIM.MARE
 				}
 			}
 		}
-
 	}
 	public class Constant : Value
 	{
