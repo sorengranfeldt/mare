@@ -1,4 +1,6 @@
-﻿using Microsoft.MetadirectoryServices;
+﻿// october 15, 2015 | soren granfeldt
+//	- added transform IsRegexMatch
+using Microsoft.MetadirectoryServices;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -20,7 +22,8 @@ namespace FIM.MARE
 		XmlInclude(typeof(PadRight)), 
 		XmlInclude(typeof(RegexReplace)), 
 		XmlInclude(typeof(Substring)), 
-		XmlInclude(typeof(RegexSelect)), 
+		XmlInclude(typeof(RegexSelect)),
+		XmlInclude(typeof(IsRegexMatch)),
 		XmlInclude(typeof(FormatDate)), 
 		XmlInclude(typeof(Base64ToGUID)), 
 		XmlInclude(typeof(IsBitSet)), 
@@ -253,6 +256,23 @@ namespace FIM.MARE
 		public override string Convert(string value)
 		{
 			return value.Length <= StartIndex ? "" : value.Length - StartIndex <= Length ? value.Substring(StartIndex) : value.Substring(StartIndex, Length);
+		}
+	}
+	public class IsRegexMatch : Transform
+	{
+		[XmlAttribute("Pattern")]
+		public string Pattern { get; set; }
+
+		[XmlAttribute("TrueValue")]
+		public string TrueValue { get; set; }
+
+		[XmlAttribute("FalseValue")]
+		public string FalseValue { get; set; }
+
+		public override string Convert(string value)
+		{
+			if (value == null) return FalseValue;
+			return Regex.IsMatch(value, Pattern, RegexOptions.IgnoreCase) ? TrueValue : FalseValue;
 		}
 	}
 	public class RegexSelect : Transform

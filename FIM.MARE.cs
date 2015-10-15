@@ -49,9 +49,7 @@ namespace FIM.MARE
 					cfg.LoadSettingsFromFile(configurationFilePath, ref config);
 				}
 				Trace.TraceInformation("loading-configuration");
-				Trace.TraceInformation("loading-assemblies");
 				config.ManagementAgent.ForEach(ma => ma.LoadAssembly());
-				Trace.TraceInformation("loaded-assemblies");
 			}
 			catch (Exception ex)
 			{
@@ -66,9 +64,7 @@ namespace FIM.MARE
 		}
 		void IMASynchronization.Initialize()
 		{
-			Trace.IndentLevel = 0;
-			Trace.TraceInformation("enter-initialize");
-			Trace.TraceInformation("exit-initialize");
+			// intentionally left blank
 		}
 		void IMASynchronization.Terminate()
 		{
@@ -126,28 +122,27 @@ namespace FIM.MARE
 			try
 			{
 				string maName = csentry.MA.Name;
-				Trace.TraceInformation("mvobjectid: {0}, ma: {0}, rule: {1}", mventry.ObjectID, maName, FlowRuleName);
+				Trace.TraceInformation("mvobjectid: {0}, ma: {1}, rule: {2}", mventry.ObjectID, maName, FlowRuleName);
 
 				ManagementAgent ma = config.ManagementAgent.Where(m => m.Name.Equals(maName)).FirstOrDefault();
 				if (ma == null) throw new NotImplementedException("management-agent-" + maName + "-not-found");
 				rules = ma.FlowRule.Where(r => r.Name.Equals(FlowRuleName) && r.Direction.Equals(direction)).ToList<FlowRule>();
 				if (rules == null) throw new NotImplementedException(direction.ToString() + "-rule-'" + FlowRuleName + "'-not-found-on-ma-" + maName);
-				Trace.TraceInformation("found-{0}-matching-rule(s)", rules.Count);
 				foreach (FlowRule r in rules) Trace.TraceInformation("found-rule {0}", r.Name);
 				FlowRule rule = rules.Where(ru => ru.Conditions.AreMet(csentry, mventry)).FirstOrDefault();
 				if (rule == null) throw new DeclineMappingException("no-" + direction.ToString() + "-rule-'" + FlowRuleName + "'-not-found-on-ma-'" + maName + "'-where-conditions-were-met");
 
-				#region FlowRuleCode
-				if (rule.GetType().Equals(typeof(FlowRuleCode)))
-				{
-					InvokeFlowRuleCode(ma, rule, csentry, mventry);
-					return;
-				}
-				#endregion
 				#region FlowRuleDefault
 				if (rule.GetType().Equals(typeof(FlowRule)))
 				{
 					InvokeFlowRule(rule, csentry, mventry);
+					return;
+				}
+				#endregion
+				#region FlowRuleCode
+				if (rule.GetType().Equals(typeof(FlowRuleCode)))
+				{
+					InvokeFlowRuleCode(ma, rule, csentry, mventry);
 					return;
 				}
 				#endregion

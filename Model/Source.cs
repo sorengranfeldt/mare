@@ -29,9 +29,9 @@ namespace FIM.MARE
 				{
 					foreach (Transform t in Transforms.Transform)
 					{
-						Trace.TraceInformation("input[{0}]: '{1}'", t.GetType(), value);
+						Trace.TraceInformation("input[{0}]: '{1}'", t.GetType().Name, value);
 						value = t.Convert(value);
-						Trace.TraceInformation("output[{0}]: '{1}'", t.GetType(), value);
+						Trace.TraceInformation("output[{0}]: '{1}'", t.GetType().Name, value);
 					}
 				}
 				else
@@ -52,7 +52,6 @@ namespace FIM.MARE
 			}
 			return value;
 		}
-
 	}
 	public class Attribute : Value
 	{
@@ -114,20 +113,22 @@ namespace FIM.MARE
 		public void SetTargetValue(Direction direction, CSEntry csentry, MVEntry mventry, string Value)
 		{
 			AttributeType at = direction.Equals(Direction.Import) ? mventry[this.Name].DataType : csentry[this.Name].DataType;
-			Trace.TraceInformation("target-attribute-type: {0}", at);
 			if (string.IsNullOrEmpty(Value))
 			{
 				switch (this.ActionOnNullSource)
 				{
 					case AttributeAction.None:
+						Trace.TraceInformation("decline-mapping-since-no-default-action");
 						throw new DeclineMappingException("no-default-action");
 					case AttributeAction.Delete:
+						Trace.TraceInformation("deleting-target-attribute-value: attr: {0}, type: {1}", this.Name, at);
 						if (direction.Equals(Direction.Import))
 							mventry[this.Name].Delete();
 						else
 							csentry[this.Name].Delete();
 						break;
 					case AttributeAction.SetDefault:
+						Trace.TraceInformation("set-target-attribute-default-value: attr: {0}, type: {1}, value: '{2}'", this.Name, at, this.DefaultValue);
 						if (direction.Equals(Direction.Import))
 							mventry[this.Name].Value = this.DefaultValue;
 						else
@@ -139,11 +140,14 @@ namespace FIM.MARE
 			}
 			else
 			{
+				Trace.TraceInformation("set-target-attribute-value: attr: {0}, type: {1}, value: '{2}'", this.Name, at, Value);
 				if (direction.Equals(Direction.Import))
 				{
 					if (at == AttributeType.Reference)
 					{
-						throw new NotSupportedException("cannot-import-to-reference");
+						Exception ex = new NotSupportedException("cannot-import-to-reference");
+						Trace.TraceError("mapping-exception {0}", ex.GetBaseException());
+						throw ex;
 					}
 					else
 					{

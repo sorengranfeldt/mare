@@ -32,15 +32,15 @@ namespace FIM.MARE
 		}
 		public void LoadAssembly()
 		{
+			if (string.IsNullOrEmpty(this.CustomDLL))
+			{
+				return;
+			}
 			Trace.TraceInformation("enter-loadassembly");
 			Trace.Indent();
 			try
 			{
-				if (string.IsNullOrEmpty(this.CustomDLL))
-				{
-					// nothing to do
-				}
-				else
+
 				{
 					Trace.TraceInformation("loading-assembly {0}", Path.Combine(Utils.ExtensionsDirectory, this.CustomDLL));
 #if DEBUG

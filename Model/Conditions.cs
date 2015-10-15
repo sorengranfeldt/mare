@@ -166,13 +166,18 @@ namespace FIM.MARE
 
 		public bool AreMet(CSEntry csentry, MVEntry mventry)
 		{
+			if (ConditionBase == null || ConditionBase.Count == 0)
+			{
+				return true; // assume true if no conditions
+			}
 			if (Operator.Equals(ConditionOperator.And))
 			{
 				bool met = true;
+
 				foreach (ConditionBase condition in ConditionBase)
 				{
 					met = condition.IsMet(csentry, mventry);
-					Trace.TraceInformation("'And' condition '{0}' returned: {1}", condition.GetType(), met);
+					Trace.TraceInformation("'And' condition '{0}' returned: {1}", condition.GetType().Name, met);
 					if (met == false) break;
 				}
 				Trace.TraceInformation("All 'And' conditions {0} met", met ? "were" : "were not");
@@ -184,7 +189,7 @@ namespace FIM.MARE
 				foreach (ConditionBase condition in ConditionBase)
 				{
 					met = condition.IsMet(csentry, mventry);
-					Trace.TraceInformation("'Or' condition '{0}' returned: {1}", condition.GetType(), met);
+					Trace.TraceInformation("'Or' condition '{0}' returned: {1}", condition.GetType().Name, met);
 					if (met == true) break;
 				}
 				Trace.TraceInformation("One or more 'Or' conditions {0} met", met ? "were" : "were not");
