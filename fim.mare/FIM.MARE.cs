@@ -16,7 +16,8 @@
 //  - added transform LookupMVValue
 // oct 16, 2015 | soren granfeldt
 //	- added static tracer through project
-//	- added logging of version information to instantiation function
+//	- added logging of version information to instantiation function 
+//test
 
 using Microsoft.MetadirectoryServices;
 using System;
