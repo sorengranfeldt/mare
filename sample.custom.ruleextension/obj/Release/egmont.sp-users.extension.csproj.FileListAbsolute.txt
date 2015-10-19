@@ -1,8 +1,0 @@
-G:\data\Dropbox (Inceptio)\inc-customers\egmont-it\Project\fim2010r2\code-sync\egmont.sp-users.extension\obj\Release\egmont.sp-users.extension.csprojResolveAssemblyReference.cache
-G:\data\Dropbox (Inceptio)\inc-customers\egmont-it\Project\fim2010r2\code-sync\egmont.sp-users.extension\bin\Release\egmont.sp-users.extension.dll
-G:\data\Dropbox (Inceptio)\inc-customers\egmont-it\Project\fim2010r2\code-sync\egmont.sp-users.extension\bin\Release\Microsoft.MetadirectoryServicesEx.dll
-G:\data\Dropbox (Inceptio)\inc-customers\egmont-it\Project\fim2010r2\code-sync\egmont.sp-users.extension\obj\Release\egmont.sp-users.extension.dll
-C:\data\Dropbox (Inceptio)\inc-customers\egmont-it\Project\fim2010r2\code-sync\egmont.sp-users.extension\bin\Release\egmont.sp-users.extension.dll
-C:\data\Dropbox (Inceptio)\inc-customers\egmont-it\Project\fim2010r2\code-sync\egmont.sp-users.extension\bin\Release\Microsoft.MetadirectoryServicesEx.dll
-C:\data\Dropbox (Inceptio)\inc-customers\egmont-it\Project\fim2010r2\code-sync\egmont.sp-users.extension\obj\Release\egmont.sp-users.extension.csprojResolveAssemblyReference.cache
-C:\data\Dropbox (Inceptio)\inc-customers\egmont-it\Project\fim2010r2\code-sync\egmont.sp-users.extension\obj\Release\egmont.sp-users.extension.dll

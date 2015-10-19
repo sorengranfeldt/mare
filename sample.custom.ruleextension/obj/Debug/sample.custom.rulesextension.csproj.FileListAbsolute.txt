@@ -1,5 +1,0 @@
-G:\data\Dropbox (Personal)\code\fim\fim.mare\sample.custom.ruleextension\obj\Debug\sample.custom.rulesextension.dll
-G:\data\Dropbox (Personal)\code\fim\fim.mare\sample.custom.ruleextension\obj\Debug\sample.custom.rulesextension.pdb
-G:\data\Dropbox (Personal)\code\fim\fim.mare\sample.custom.ruleextension\bin\Debug\sample.custom.rulesextension.dll
-G:\data\Dropbox (Personal)\code\fim\fim.mare\sample.custom.ruleextension\bin\Debug\sample.custom.rulesextension.pdb
-G:\data\Dropbox (Personal)\code\fim\fim.mare\sample.custom.ruleextension\bin\Debug\Microsoft.MetadirectoryServicesEx.dll

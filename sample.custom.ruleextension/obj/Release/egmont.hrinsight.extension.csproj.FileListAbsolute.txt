@@ -1,4 +1,0 @@
-C:\data\Dropbox (Inceptio)\inc-customers\egmont-it\Project\fim2010r2\code-sync\egmont.hrinsight.extension\obj\Release\egmont.hrinsight.extension.csprojResolveAssemblyReference.cache
-C:\data\Dropbox (Inceptio)\inc-customers\egmont-it\Project\fim2010r2\code-sync\egmont.hrinsight.extension\bin\Release\egmont.hrinsight.extension.dll
-C:\data\Dropbox (Inceptio)\inc-customers\egmont-it\Project\fim2010r2\code-sync\egmont.hrinsight.extension\bin\Release\Microsoft.MetadirectoryServicesEx.dll
-C:\data\Dropbox (Inceptio)\inc-customers\egmont-it\Project\fim2010r2\code-sync\egmont.hrinsight.extension\obj\Release\egmont.hrinsight.extension.dll
