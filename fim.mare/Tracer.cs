@@ -1,7 +1,4 @@
-﻿// october 19 | soren granfeldt
-//	- added switch creation to constructor
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
