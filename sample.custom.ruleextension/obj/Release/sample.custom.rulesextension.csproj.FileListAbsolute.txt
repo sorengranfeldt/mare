@@ -1,0 +1,3 @@
+G:\data\Dropbox (Personal)\code\fim\fim.mare\sample.custom.ruleextension\bin\Release\sample.custom.rulesextension.dll
+G:\data\Dropbox (Personal)\code\fim\fim.mare\sample.custom.ruleextension\bin\Release\Microsoft.MetadirectoryServicesEx.dll
+G:\data\Dropbox (Personal)\code\fim\fim.mare\sample.custom.ruleextension\obj\Release\sample.custom.rulesextension.dll
