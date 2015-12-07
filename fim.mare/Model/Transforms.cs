@@ -1,8 +1,12 @@
-﻿// october 15, 2015 | soren granfeldt
+﻿// feb 12, 2015 | soren granfeldt
+//  - added transform LookupMVValue
+// october 15, 2015 | soren granfeldt
 //	- added transform RegexIsMatch
 // october 15, 2015 | soren granfeldt
 //	- added MultiValueConcatenate and MultiValueRemoveIfNotMatch
 //	- change type of data flowing through transforms from string to object to support multivalues
+// december 7, 2015 | soren granfeldt
+//	- added ReplaceBefore and ReplaceAfter
 
 using Microsoft.MetadirectoryServices;
 using System;
@@ -37,7 +41,9 @@ namespace FIM.MARE
 		XmlInclude(typeof(SetBit)),
 		XmlInclude(typeof(LookupMVValue)),
 		XmlInclude(typeof(MultiValueConcatenate)),
-		XmlInclude(typeof(MultiValueRemoveIfNotMatch))
+		XmlInclude(typeof(MultiValueRemoveIfNotMatch)),
+		XmlInclude(typeof(ReplaceBefore)),
+		XmlInclude(typeof(ReplaceAfter))
 	]
 	public abstract class Transform
 	{
@@ -283,6 +289,40 @@ namespace FIM.MARE
 		public override object Convert(object value)
 		{
 			return string.IsNullOrEmpty(value as string) ? value : value.ToString().Replace(OldValue, NewValue);
+		}
+	}
+	public class ReplaceBefore : Transform
+	{
+		[XmlAttribute("IndexOf")]
+		public string IndexOf { get; set; }
+		[XmlAttribute("ReplaceValue")]
+		public string ReplaceValue { get; set; }
+		public override object Convert(object value)
+		{
+			if (value == null) return value;
+			string s = value.ToString();
+			Tracer.TraceInformation("s {0}", s);
+			int idx = s.IndexOf(IndexOf);
+			Tracer.TraceInformation("idx {0}", idx);
+			s = string.Concat(ReplaceValue, s.Substring(idx));
+			return s;
+		}
+	}
+	public class ReplaceAfter : Transform
+	{
+		[XmlAttribute("IndexOf")]
+		public string IndexOf { get; set; }
+		[XmlAttribute("ReplaceValue")]
+		public string ReplaceValue { get; set; }
+		public override object Convert(object value)
+		{
+			if (value == null) return value;
+			string s = value.ToString();
+			Tracer.TraceInformation("s {0}", s);
+			int idx = s.IndexOf(IndexOf);
+			Tracer.TraceInformation("idx {0}", idx);
+			s = string.Concat(s.Remove(idx+IndexOf.Length), ReplaceValue);
+			return s;
 		}
 	}
 	public class PadLeft : Transform
