@@ -71,7 +71,7 @@ namespace FIM.MARE
 		{
 			string value = this.DefaultValue;
 			bool sourceValueIsPresent = false;
-			if (Name.Equals("[DN]") || Name.Equals("[RDN]") || Name.Equals("[ObjectType]"))
+			if (Name.Equals("[DN]") || Name.Equals("[RDN]") || Name.Equals("[ObjectType]") || Name.Equals("[ConnectionChangeTime]"))
 			{
 				sourceValueIsPresent = true;
 			}
@@ -85,6 +85,9 @@ namespace FIM.MARE
 				{
 					switch (Name)
 					{
+						case "[ConnectionChangeTime]":
+							value = csentry.ConnectionChangeTime.ToString("yyyy-MM-ddTHH:mm:ss.000");
+							break;
 						case "[DN]":
 							value = csentry.DN.ToString();
 							break;
