@@ -7,6 +7,8 @@
 //	- change type of data flowing through transforms from string to object to support multivalues
 // december 7, 2015 | soren granfeldt
 //	- added ReplaceBefore and ReplaceAfter
+// januar 28, 2016 | soren granfeldt
+//	-fixed FromValueCollection to handle single value flowed to multivalued
 
 using Microsoft.MetadirectoryServices;
 using System;
@@ -43,12 +45,14 @@ namespace FIM.MARE
 		XmlInclude(typeof(MultiValueConcatenate)),
 		XmlInclude(typeof(MultiValueRemoveIfNotMatch)),
 		XmlInclude(typeof(ReplaceBefore)),
-		XmlInclude(typeof(ReplaceAfter))
+		XmlInclude(typeof(ReplaceAfter)),
+		XmlInclude(typeof(IsBeforeOrAfter))
 	]
 	public abstract class Transform
 	{
 		public abstract object Convert(object value);
 
+		// TODO: merge this function with same function from Source.cs
 		protected List<object> FromValueCollection(object value)
 		{
 			List<object> values = new List<object>();
@@ -59,7 +63,12 @@ namespace FIM.MARE
 			}
 			else
 			{
-				Tracer.TraceInformation("converting-to-list");
+				Tracer.TraceInformation("transform-converting-to-list");
+				if (value.GetType() == typeof(System.String))
+				{
+					values.Add(value);
+					return values;
+				}
 				ValueCollection vc = (ValueCollection)value;
 				foreach (Microsoft.MetadirectoryServices.Value val in vc)
 				{
@@ -134,6 +143,13 @@ namespace FIM.MARE
 		AccountSid,
 		[XmlEnum(Name = "AccountDomainSid")]
 		AccountDomainSid
+	}
+	public enum DateTimeRelativity
+	{
+		[XmlEnum(Name = "After")]
+		After,
+		[XmlEnum(Name = "Before")]
+		Before
 	}
 	public class SIDToString : Transform
 	{
@@ -321,7 +337,7 @@ namespace FIM.MARE
 			Tracer.TraceInformation("s {0}", s);
 			int idx = s.IndexOf(IndexOf);
 			Tracer.TraceInformation("idx {0}", idx);
-			s = string.Concat(s.Remove(idx+IndexOf.Length), ReplaceValue);
+			s = string.Concat(s.Remove(idx + IndexOf.Length), ReplaceValue);
 			return s;
 		}
 	}
@@ -442,10 +458,67 @@ namespace FIM.MARE
 			return returnValue;
 		}
 	}
+
+	public class IsBeforeOrAfter : Transform
+	{
+		[XmlAttribute("AddDays")]
+		public int AddDays { get; set; }
+
+		[XmlAttribute("AddHours")]
+		public int AddHours { get; set; }
+		[XmlAttribute("AddMonths")]
+		public int AddMonths { get; set; }
+
+		[XmlAttribute("Relativity")]
+		[XmlTextAttribute()]
+		public DateTimeRelativity Relativity { get; set; }
+
+		public override object Convert(object value)
+		{
+			if (value == null) return value;
+			string input = value as string;
+			DateTime dateValue;
+			DateTime now = DateTime.Now;
+			if (DateTime.TryParse(input, out dateValue))
+			{
+				bool returnValue = false;
+				dateValue = dateValue.AddHours(this.AddHours);
+				Tracer.TraceInformation("date-after-addhours {0}", dateValue);
+
+				dateValue = dateValue.AddDays(this.AddDays);
+				Tracer.TraceInformation("date-after-adddays {0}", dateValue);
+
+				dateValue = dateValue.AddMonths(this.AddMonths);
+				Tracer.TraceInformation("date-after-addmonths {0}", dateValue);
+
+				if (this.Relativity == DateTimeRelativity.After)
+				{
+					returnValue = now > dateValue;
+					Tracer.TraceInformation("compare-dates now: {0}, value: {1}, is-after: {2}", now, dateValue, returnValue);
+					return returnValue;
+				}
+				else if (this.Relativity == DateTimeRelativity.Before)
+				{
+					returnValue = now < dateValue;
+					Tracer.TraceInformation("compare-dates now: {0}, value: {1}, is-before: {2}", now, dateValue, returnValue);
+					return returnValue;
+				}
+				Tracer.TraceInformation("is-{0}-{1}-{2}: {3}", now, this.Relativity, dateValue, returnValue);
+				return returnValue;
+			}
+			else
+			{
+				Tracer.TraceWarning("could-not-parse-to-date {0}", input);
+			}
+			return input;
+		}
+	}
+
 	public class Transforms
 	{
 		[XmlElement("Transform")]
 		public List<Transform> Transform { get; set; }
 	}
+
 
 }

@@ -127,7 +127,8 @@ namespace FIM.MARE
 		public override bool IsMet(CSEntry csentry, MVEntry mventry)
 		{
 			string value = SourceValue(csentry, mventry);
-			return string.IsNullOrEmpty(value) ? false : Regex.IsMatch(value, Pattern);
+			Tracer.TraceInformation("value-is: {0}", value);
+			return string.IsNullOrEmpty(value) ? false : Regex.IsMatch(value, Pattern, RegexOptions.IgnoreCase);
 		}
 	}
 	public class SourceValueNotMatch : ConditionBase
@@ -138,7 +139,8 @@ namespace FIM.MARE
 		public override bool IsMet(CSEntry csentry, MVEntry mventry)
 		{
 			string value = SourceValue(csentry, mventry);
-			return string.IsNullOrEmpty(value) ? false : !Regex.IsMatch(value, Pattern);
+			Tracer.TraceInformation("value-is: {0}", value);
+			return string.IsNullOrEmpty(value) ? false : !Regex.IsMatch(value, Pattern, RegexOptions.IgnoreCase);
 		}
 	}
 	public class TargetValueMatch : ConditionBase

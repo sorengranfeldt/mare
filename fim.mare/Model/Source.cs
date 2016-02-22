@@ -1,6 +1,9 @@
 ﻿// october 16, 2015 | soren granfeldt
 //	-added support for updating multivalues
 //	-added multivalue attribute type
+// januar 28, 2016 | soren granfeldt
+//	-fixed two bugs for export flows in SetTargetValue (using mventry instead of csentry) and added .clear for multivalues
+//	-fixed FromValueCollection to handle single value flowed to multivalued
 
 using Microsoft.MetadirectoryServices;
 using System;
@@ -126,7 +129,8 @@ namespace FIM.MARE
 		{
 			AttributeType at = direction.Equals(Direction.Import) ? mventry[this.Name].DataType : csentry[this.Name].DataType;
 			bool isMultivalued = direction.Equals(Direction.Import) ? mventry[this.Name].IsMultivalued : csentry[this.Name].IsMultivalued;
-			if (Value == null)
+			Tracer.TraceInformation("target-attribute: name: {0}, type: {1}, is-multivalue: {2}", this.Name, at, isMultivalued);
+			if (Value == null || string.IsNullOrEmpty(Value.ToString()))
 			{
 				switch (this.ActionOnNullSource)
 				{
@@ -153,7 +157,7 @@ namespace FIM.MARE
 			}
 			else
 			{
-				Tracer.TraceInformation("set-target-attribute-value: attr: {0}, type: {1}, value: '{2}'", this.Name, at, Value);
+				Tracer.TraceInformation("set-target-attribute-value: attr: {0}, type: {1}, value: '{2}', direction: {3}", this.Name, at, Value, direction);
 				if (direction.Equals(Direction.Import))
 				{
 					if (at == AttributeType.Reference)
@@ -166,6 +170,7 @@ namespace FIM.MARE
 					{
 						if (isMultivalued)
 						{
+							mventry[this.Name].Values.Clear();
 							foreach (object val in FromValueCollection(Value))
 								mventry[this.Name].Values.Add(val as string);
 						}
@@ -185,8 +190,9 @@ namespace FIM.MARE
 						case AttributeType.Integer:
 							if (isMultivalued)
 							{
+								csentry[this.Name].Values.Clear();
 								foreach (object val in FromValueCollection(Value))
-									mventry[this.Name].Values.Add(long.Parse(Value as string));
+									csentry[this.Name].Values.Add(long.Parse(Value as string));
 							}
 							else
 							{
@@ -196,8 +202,9 @@ namespace FIM.MARE
 						default:
 							if (isMultivalued)
 							{
-								foreach (object val in FromValueCollection(Value))
-									mventry[this.Name].Values.Add(val as string);
+								csentry[this.Name].Values.Clear();
+                                foreach (object val in FromValueCollection(Value))
+									csentry[this.Name].Values.Add(val as string);
 							}
 							else
 							{
@@ -218,7 +225,12 @@ namespace FIM.MARE
 			}
 			else
 			{
-				Tracer.TraceInformation("converting-to-list");
+				Tracer.TraceInformation("source-converting-to-list");
+				if (value.GetType() == typeof(System.String))
+				{
+					values.Add(value);
+					return values;
+				}
 				ValueCollection vc = (ValueCollection)value;
 				foreach (Microsoft.MetadirectoryServices.Value val in vc)
 				{

@@ -4,7 +4,26 @@
 		<XmlFile Name="CountryCodes" Path="C:\temp\CountryCodes.xml" />
 	</ExternalFiles>
 	<ManagementAgent Name="ad">
-		
+
+		<Deprovision DefaultAction="Disconnect">
+
+			<Rule Name="Delete expired accounts" Action="Delete">
+				<Description></Description>
+				<Conditions Operator="Or">
+					<Condition xsi:type="ObjectClassMatch" Source="CSEntry" Pattern="^person$" />
+					<Condition xsi:type="SubCondition" Operator="And">
+						<Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="company" Pattern="^Sales|Purchase$" />
+						<Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="city" Pattern="^Beijing|New York$" />
+					</Condition>
+				</Conditions>
+			</Rule>
+
+			<Rule Name="Disconnect others" Action="Disconnect">
+				<Description></Description>
+			</Rule>
+
+		</Deprovision>
+
 		<FlowRule Name="cleanedProxyAddresses" Direction="Import" xsi:type="FlowRule">
 			<SourceExpression>
 				<Source Name="proxyAddresses" xsi:type="MultiValueAttribute">
@@ -16,7 +35,7 @@
 			<Target Name="cleanedProxyAddresses" ActionOnNullSource="Delete" />
 		</FlowRule>
 
-		
+
 		<FlowRule Name="proxy" Direction="Import" xsi:type="FlowRule">
 			<SourceExpression>
 				<Source Name="proxyAddresses" xsi:type="MultiValueAttribute">
@@ -29,7 +48,7 @@
 			<Target Name="mail" ActionOnNullSource="Delete" />
 		</FlowRule>
 
-		
+
 		<FlowRule Name="AccountName" Direction="Export" xsi:type="FlowRule">
 			<Conditions Operator="Or">
 				<Condition xsi:type="ObjectClassMatch" Source="CSEntry" Pattern="^person$" />

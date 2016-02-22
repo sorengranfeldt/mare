@@ -22,6 +22,8 @@ namespace FIM.MARE
 		[XmlElement("FlowRule")]
 		public List<FlowRule> FlowRule { get; set; }
 
+		public Deprovision Deprovision { get; set; }
+
 		public void InvokeMapAttributesForImport(string FlowRuleName, CSEntry csentry, MVEntry mventry)
 		{
 			instance.MapAttributesForImport(FlowRuleName, csentry, mventry);

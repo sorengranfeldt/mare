@@ -1,4 +1,7 @@
-﻿using System.Xml.Serialization;
+﻿// feb 10, 2016 | soren granfeldt
+//	-added Description attribute to flowrule to allow for better loggin information
+
+using System.Xml.Serialization;
 
 namespace FIM.MARE
 {
@@ -24,6 +27,9 @@ namespace FIM.MARE
 	{
 		[XmlAttribute("Name")]
 		public string Name { get; set; }
+
+		[XmlAttribute("Description")]
+		public string Description { get; set; }
 
 		[XmlAttribute("Direction")]
 		[XmlTextAttribute()]

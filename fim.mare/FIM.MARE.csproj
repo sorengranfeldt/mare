@@ -91,6 +91,7 @@
     <Compile Include="Model\Configuration.cs" />
     <Compile Include="Model\ConfigurationManager.cs" />
     <Compile Include="Model\ExternalFiles.cs" />
+    <Compile Include="Model\Deprovision.cs" />
     <Compile Include="Model\FlowRules.cs" />
     <Compile Include="Model\ManagementAgent.cs" />
     <Compile Include="Model\Source.cs" />

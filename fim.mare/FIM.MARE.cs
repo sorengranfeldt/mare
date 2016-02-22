@@ -15,6 +15,8 @@
 // oct 16, 2015 | soren granfeldt
 //	- added static tracer through project
 //	- added logging of version information to instantiation function
+// feb 10, 2016 | soren granfeldt
+//	- added logging of flowrule description for better debugging when more than one rule with same name
 
 using Microsoft.MetadirectoryServices;
 using System;
@@ -99,10 +101,7 @@ namespace FIM.MARE
 		{
 			throw new EntryPointNotImplementedException();
 		}
-		DeprovisionAction IMASynchronization.Deprovision(CSEntry csentry)
-		{
-			throw new EntryPointNotImplementedException();
-		}
+
 		bool IMASynchronization.FilterForDisconnection(CSEntry csentry)
 		{
 			throw new EntryPointNotImplementedException();
@@ -116,6 +115,69 @@ namespace FIM.MARE
 			throw new EntryPointNotImplementedException();
 		}
 		#endregion
+
+		DeprovisionAction FromOperation(DeprovisionOperation operation)
+		{
+			switch (operation)
+			{
+				case DeprovisionOperation.Delete:
+					return DeprovisionAction.Delete;
+				case DeprovisionOperation.Disconnect:
+					return DeprovisionAction.Disconnect;
+				case DeprovisionOperation.ExplicitDisconnect:
+					return DeprovisionAction.ExplicitDisconnect;
+				default:
+					return DeprovisionAction.Disconnect;
+			}
+		}
+		DeprovisionAction IMASynchronization.Deprovision(CSEntry csentry)
+		{
+			Tracer.TraceInformation("enter-deprovision");
+			Tracer.Indent();
+
+			List<DeprovisionRule> rules = null;
+			try
+			{
+				string maName = csentry.MA.Name;
+				Tracer.TraceInformation("ma: {1}, dn: {2}", maName, csentry.DN);
+
+				ManagementAgent ma = config.ManagementAgent.Where(m => m.Name.Equals(maName)).FirstOrDefault();
+				if (ma == null) throw new NotImplementedException("management-agent-" + maName + "-not-found");
+
+				rules = ma.Deprovision.DeprovisionRule.ToList<DeprovisionRule>();
+
+				if (rules == null)
+				{
+					Tracer.TraceInformation("no-rules-defined-returning-default-action", ma.Deprovision.DefaultAction);
+					return FromOperation(ma.Deprovision.DefaultAction);
+				}
+
+				foreach (DeprovisionRule r in rules)
+				{
+					Tracer.TraceInformation("found-rule name: {0}, description: {1}", r.Name, r.Description);
+				}
+
+				//DeprovisionRule rule = rules.Where(ru => ru.Conditions.AreMet(csentry, mventry)).FirstOrDefault();
+
+				return FromOperation(ma.Deprovision.DefaultAction);
+			}
+			catch (Exception ex)
+			{
+				Tracer.TraceError("deprovision {0}", ex.GetBaseException());
+				throw ex;
+			}
+			finally
+			{
+				if (rules != null)
+				{
+					rules.Clear();
+					rules = null;
+				}
+
+				Tracer.Unindent();
+				Tracer.TraceInformation("exit-deprovision");
+			}
+		}
 
 		public void MapAttributesForImportExportDetached(string FlowRuleName, CSEntry csentry, MVEntry mventry, Direction direction)
 		{
@@ -132,7 +194,7 @@ namespace FIM.MARE
 				if (ma == null) throw new NotImplementedException("management-agent-" + maName + "-not-found");
 				rules = ma.FlowRule.Where(r => r.Name.Equals(FlowRuleName) && r.Direction.Equals(direction)).ToList<FlowRule>();
 				if (rules == null) throw new NotImplementedException(direction.ToString() + "-rule-'" + FlowRuleName + "'-not-found-on-ma-" + maName);
-				foreach (FlowRule r in rules) Tracer.TraceInformation("found-rule {0}", r.Name);
+				foreach (FlowRule r in rules) Tracer.TraceInformation("found-rule name: {0}, description: {1}", r.Name, r.Description);
 				FlowRule rule = rules.Where(ru => ru.Conditions.AreMet(csentry, mventry)).FirstOrDefault();
 				if (rule == null) throw new DeclineMappingException("no-" + direction.ToString() + "-rule-'" + FlowRuleName + "'-not-found-on-ma-'" + maName + "'-where-conditions-were-met");
 
