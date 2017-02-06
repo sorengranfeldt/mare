@@ -1,0 +1,8 @@
+/fim.mare/Microsoft.MetadirectoryServicesEx.dll
+bin
+obj
+.vs
+/.gitattributes
+/*.gitattributes
+
+*.dll

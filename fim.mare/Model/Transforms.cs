@@ -46,8 +46,10 @@ namespace FIM.MARE
 		XmlInclude(typeof(MultiValueRemoveIfNotMatch)),
 		XmlInclude(typeof(ReplaceBefore)),
 		XmlInclude(typeof(ReplaceAfter)),
-		XmlInclude(typeof(IsBeforeOrAfter))
-	]
+		XmlInclude(typeof(IsBeforeOrAfter)),
+        XmlInclude(typeof(RightString)),
+        XmlInclude(typeof(LeftString))
+    ]
 	public abstract class Transform
 	{
 		public abstract object Convert(object value);
@@ -261,7 +263,37 @@ namespace FIM.MARE
 			return val.ToString();
 		}
 	}
-	public class ToUpper : Transform
+    public class RightString : Transform
+    {
+        [XmlAttribute("CharactersToGet")]
+        public int CharactersToGet { get; set; }
+        internal string Right(string str, int length)
+        {
+            str = (str ?? string.Empty);
+            return (str.Length >= length)
+                ? str.Substring(str.Length - length, length)
+                : str;
+        }
+        public override object Convert(object value)
+        {
+            return string.IsNullOrEmpty(value as string) ? value : this.Right(value as string, CharactersToGet);
+        }
+    }
+    public class LeftString : Transform
+    {
+        [XmlAttribute("CharactersToGet")]
+        public int CharactersToGet { get; set; }
+        internal string Left(string str, int length)
+        {
+            str = (str ?? string.Empty);
+            return str.Substring(0, Math.Min(length, str.Length));
+        }
+        public override object Convert(object value)
+        {
+            return string.IsNullOrEmpty(value as string) ? value : this.Left(value as string, CharactersToGet);
+        }
+    }
+    public class ToUpper : Transform
 	{
 		public override object Convert(object value)
 		{
