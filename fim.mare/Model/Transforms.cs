@@ -25,7 +25,8 @@ namespace FIM.MARE
 	[
 		XmlInclude(typeof(ToUpper)),
 		XmlInclude(typeof(ToLower)),
-		XmlInclude(typeof(Trim)),
+		XmlInclude(typeof(StringCase)),
+        XmlInclude(typeof(Trim)),
 		XmlInclude(typeof(TrimEnd)),
 		XmlInclude(typeof(TrimStart)),
 		XmlInclude(typeof(Replace)),
@@ -44,12 +45,13 @@ namespace FIM.MARE
 		XmlInclude(typeof(LookupMVValue)),
 		XmlInclude(typeof(MultiValueConcatenate)),
 		XmlInclude(typeof(MultiValueRemoveIfNotMatch)),
+		XmlInclude(typeof(MultiValueRemoveIfMatch)),
 		XmlInclude(typeof(ReplaceBefore)),
 		XmlInclude(typeof(ReplaceAfter)),
 		XmlInclude(typeof(IsBeforeOrAfter)),
-        XmlInclude(typeof(RightString)),
-        XmlInclude(typeof(LeftString))
-    ]
+		XmlInclude(typeof(RightString)),
+		XmlInclude(typeof(LeftString))
+	]
 	public abstract class Transform
 	{
 		public abstract object Convert(object value);
@@ -114,6 +116,31 @@ namespace FIM.MARE
 			foreach (object val in values)
 			{
 				if (Regex.IsMatch(val.ToString(), this.Pattern, RegexOptions.IgnoreCase))
+				{
+					Tracer.TraceInformation("removing-value {0}", val);
+				}
+				else
+				{
+					Tracer.TraceInformation("keeping-value {0}", val.ToString());
+					returnValues.Add(val);
+				}
+			}
+			return returnValues;
+		}
+	}
+	public class MultiValueRemoveIfMatch : Transform
+	{
+		[XmlAttribute("Pattern")]
+		public string Pattern { get; set; }
+		public override object Convert(object value)
+		{
+			if (value == null) return value;
+
+			List<object> values = FromValueCollection(value);
+			List<object> returnValues = new List<object>();
+			foreach (object val in values)
+			{
+				if (!Regex.IsMatch(val.ToString(), this.Pattern, RegexOptions.IgnoreCase))
 				{
 					Tracer.TraceInformation("removing-value {0}", val);
 				}
@@ -263,37 +290,37 @@ namespace FIM.MARE
 			return val.ToString();
 		}
 	}
-    public class RightString : Transform
-    {
-        [XmlAttribute("CharactersToGet")]
-        public int CharactersToGet { get; set; }
-        internal string Right(string str, int length)
-        {
-            str = (str ?? string.Empty);
-            return (str.Length >= length)
-                ? str.Substring(str.Length - length, length)
-                : str;
-        }
-        public override object Convert(object value)
-        {
-            return string.IsNullOrEmpty(value as string) ? value : this.Right(value as string, CharactersToGet);
-        }
-    }
-    public class LeftString : Transform
-    {
-        [XmlAttribute("CharactersToGet")]
-        public int CharactersToGet { get; set; }
-        internal string Left(string str, int length)
-        {
-            str = (str ?? string.Empty);
-            return str.Substring(0, Math.Min(length, str.Length));
-        }
-        public override object Convert(object value)
-        {
-            return string.IsNullOrEmpty(value as string) ? value : this.Left(value as string, CharactersToGet);
-        }
-    }
-    public class ToUpper : Transform
+	public class RightString : Transform
+	{
+		[XmlAttribute("CharactersToGet")]
+		public int CharactersToGet { get; set; }
+		internal string Right(string str, int length)
+		{
+			str = (str ?? string.Empty);
+			return (str.Length >= length)
+				? str.Substring(str.Length - length, length)
+				: str;
+		}
+		public override object Convert(object value)
+		{
+			return string.IsNullOrEmpty(value as string) ? value : this.Right(value as string, CharactersToGet);
+		}
+	}
+	public class LeftString : Transform
+	{
+		[XmlAttribute("CharactersToGet")]
+		public int CharactersToGet { get; set; }
+		internal string Left(string str, int length)
+		{
+			str = (str ?? string.Empty);
+			return str.Substring(0, Math.Min(length, str.Length));
+		}
+		public override object Convert(object value)
+		{
+			return string.IsNullOrEmpty(value as string) ? value : this.Left(value as string, CharactersToGet);
+		}
+	}
+	public class ToUpper : Transform
 	{
 		public override object Convert(object value)
 		{
@@ -545,6 +572,53 @@ namespace FIM.MARE
 			return input;
 		}
 	}
+
+	public enum CaseType
+	{
+		[XmlEnum(Name = "Lowercase")]
+		Lowercase,
+		[XmlEnum(Name = "Uppercase")]
+		Uppercase,
+		[XmlEnum(Name = "TitleCase")]
+		TitleCase
+	}
+	public class StringCase : Transform
+	{
+		[XmlAttribute("Culture")]
+		public string Culture { get; set; }
+		internal CultureInfo cultureInfo
+		{
+			get
+			{
+				if (string.IsNullOrEmpty(this.Culture))
+				{
+					return CultureInfo.CurrentCulture;
+				}
+				return new CultureInfo(this.Culture, false);
+			}
+		}
+		[XmlAttribute("CaseType")]
+		[XmlTextAttribute()]
+		public CaseType CaseType { get; set; }
+
+		public override object Convert(object value)
+		{
+			if (value == null) return value;
+			TextInfo textInfo = this.cultureInfo.TextInfo;
+			switch (CaseType)
+			{
+				case CaseType.Lowercase:
+					return textInfo.ToLower(value as string);
+				case CaseType.Uppercase:
+					return textInfo.ToUpper(value as string);
+				case CaseType.TitleCase:
+					return textInfo.ToTitleCase(value as string);
+				default:
+					return value;
+			}
+		}
+	}
+
 
 	public class Transforms
 	{
