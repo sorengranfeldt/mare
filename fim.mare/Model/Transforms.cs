@@ -567,7 +567,7 @@ namespace FIM.MARE
 			}
 			else
 			{
-				Tracer.TraceWarning("could-not-parse-to-date {0}", input);
+				Tracer.TraceWarning("could-not-parse-to-date {0}", 1, input);
 			}
 			return input;
 		}

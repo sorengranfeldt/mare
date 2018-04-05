@@ -21,10 +21,12 @@ namespace FIM.MARE
 		public string CustomDLL { get; set; }
 		[XmlElement("FlowRule")]
 		public List<FlowRule> FlowRule { get; set; }
+        [XmlElement("JoinRule")]
+        public List<JoinRule> JoinRule { get; set; }
+        [XmlElement("DeprovisionRule")]
+        public DeprovisionRule DeprovisionRule { get; set; }
 
-		public Deprovision Deprovision { get; set; }
-
-		public void InvokeMapAttributesForImport(string FlowRuleName, CSEntry csentry, MVEntry mventry)
+        public void InvokeMapAttributesForImport(string FlowRuleName, CSEntry csentry, MVEntry mventry)
 		{
 			instance.MapAttributesForImport(FlowRuleName, csentry, mventry);
 		}
@@ -39,7 +41,6 @@ namespace FIM.MARE
 				return;
 			}
 			Tracer.TraceInformation("enter-loadassembly");
-			Tracer.Indent();
 			try
 			{
 
@@ -65,7 +66,6 @@ namespace FIM.MARE
 			}
 			finally
 			{
-				Tracer.Unindent();
 				Tracer.TraceInformation("exit-loadassembly");
 			}
 		}

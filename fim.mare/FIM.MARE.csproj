@@ -9,7 +9,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ApplicationIcon />
     <AssemblyKeyContainerName />
-    <AssemblyName>FIM.MARE</AssemblyName>
+    <AssemblyName>ma.sp-profile.FIM.MARE</AssemblyName>
     <AssemblyOriginatorKeyFile />
     <AssemblyOriginatorKeyMode>None</AssemblyOriginatorKeyMode>
     <DefaultClientScript>JScript</DefaultClientScript>
@@ -90,8 +90,9 @@
     <Compile Include="Model\Conditions.cs" />
     <Compile Include="Model\Configuration.cs" />
     <Compile Include="Model\ConfigurationManager.cs" />
+    <Compile Include="Model\JoinRule.cs" />
     <Compile Include="Model\ExternalFiles.cs" />
-    <Compile Include="Model\Deprovision.cs" />
+    <Compile Include="Model\DeprovisionRule.cs" />
     <Compile Include="Model\FlowRules.cs" />
     <Compile Include="Model\ManagementAgent.cs" />
     <Compile Include="Model\Source.cs" />

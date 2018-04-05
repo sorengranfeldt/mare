@@ -16,24 +16,22 @@ namespace FIM.MARE
 		ExplicitDisconnect
 	}
 
-	public class Deprovision
+	public class DeprovisionRule
 	{
-		[XmlAttribute("DefaultAction")]
+		[XmlAttribute("DefaultOperation")]
 		[XmlTextAttribute()]
-		public DeprovisionOperation DefaultAction { get; set; }
+		public DeprovisionOperation DefaultOperation { get; set; }
 
+		[XmlElement("Option")]
+		public List<DeprovisionOption> DeprovisionOption { get; set; }
 
-
-		[XmlElement("Rule")]
-		public List<DeprovisionRule> DeprovisionRule { get; set; }
-
-		public Deprovision()
+		public DeprovisionRule()
 		{
-			this.DeprovisionRule = new List<DeprovisionRule>();
+			this.DeprovisionOption = new List<DeprovisionOption>();
 		}
 	}
 
-	public class DeprovisionRule
+	public class DeprovisionOption
 	{
 		[XmlAttribute("Name")]
 		public string Name { get; set; }

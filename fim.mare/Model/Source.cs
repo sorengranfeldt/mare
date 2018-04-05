@@ -34,7 +34,6 @@ namespace FIM.MARE
 		public object Transform(object value, TransformDirection direction)
 		{
 			Tracer.TraceInformation("enter-transform {0}", direction);
-			Tracer.Indent();
 			try
 			{
 				if (this.Transforms != null)
@@ -59,7 +58,6 @@ namespace FIM.MARE
 			}
 			finally
 			{
-				Tracer.Unindent();
 				Tracer.TraceInformation("exit-transform {0}", direction);
 			}
 			return value;
