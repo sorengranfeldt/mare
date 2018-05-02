@@ -37,7 +37,8 @@ namespace FIM.MARE
         XmlInclude(typeof(RegexSelect)),
         XmlInclude(typeof(RegexIsMatch)),
         XmlInclude(typeof(FormatDate)),
-        XmlInclude(typeof(Base64ToGUID)),
+		XmlInclude(typeof(DateTimeAdd)),
+		XmlInclude(typeof(Base64ToGUID)),
         XmlInclude(typeof(IsBitSet)),
         XmlInclude(typeof(IsBitNotSet)),
         XmlInclude(typeof(SIDToString)),
@@ -500,20 +501,21 @@ namespace FIM.MARE
         public override object Convert(object value)
         {
             if (value == null) return value;
-            string returnValue = value as string;
-            if (DateType.Equals(DateType.FileTimeUTC))
+            string returnValue = value.ToString();
+			Tracer.TraceInformation("formatdate-from {0} / {1}", DateType, returnValue);
+			if (DateType.Equals(DateType.FileTimeUTC))
             {
-                returnValue = DateTime.FromFileTimeUtc(long.Parse(value as string)).ToString(ToFormat);
+                returnValue = DateTime.FromFileTimeUtc(long.Parse(value.ToString())).ToString(ToFormat);
                 return returnValue;
             }
             if (DateType.Equals(DateType.BestGuess))
             {
-                returnValue = DateTime.Parse(value as string, CultureInfo.InvariantCulture).ToString(ToFormat);
+				returnValue = DateTime.Parse(value.ToString(), CultureInfo.InvariantCulture).ToString(ToFormat);
                 return returnValue;
             }
             if (DateType.Equals(DateType.DateTime))
             {
-                returnValue = DateTime.ParseExact(value as string, FromFormat, CultureInfo.InvariantCulture).ToString(ToFormat);
+                returnValue = DateTime.ParseExact(value.ToString(), FromFormat, CultureInfo.InvariantCulture).ToString(ToFormat);
                 return returnValue;
             }
             return returnValue;

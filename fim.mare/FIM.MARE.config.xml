@@ -3,6 +3,7 @@
   <ExternalFiles>
     <XmlFile Name="CountryCodes" Path="C:\temp\CountryCodes.xml" />
   </ExternalFiles>
+	
   <ManagementAgent Name="ad">
 
     <Deprovision DefaultAction="Disconnect">
@@ -34,6 +35,20 @@
       </SourceExpression>
     </JoinRule>
 
+		<FlowRule Name="UserAccountControl" Direction="Export" xsi:type="FlowRule">
+			<Conditions Operator="And">
+				<Condition xsi:type="SourceValueMatch" Source="MVEntry" AttributeName="accountName" Pattern="^SG$" />
+			</Conditions>
+			<SourceExpression>
+				<Source Name="userAccountControl" xsi:type="Attribute" RetrieveFrom="CS">
+					<Transforms>
+						<Transform xsi:type="SetBit" BitPosition="1" Value="true" />
+					</Transforms>
+				</Source>
+			</SourceExpression>
+			<Target Name="userAccountControl" ActionOnNullSource="None" />
+		</FlowRule>
+		
     <FlowRule Name="cleanedProxyAddresses" Direction="Import" xsi:type="FlowRule">
       <SourceExpression>
         <Source Name="proxyAddresses" xsi:type="MultiValueAttribute">

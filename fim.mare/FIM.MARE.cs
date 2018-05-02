@@ -218,7 +218,7 @@ namespace FIM.MARE
                 if (rules == null) throw new NotImplementedException(direction.ToString() + "-rule-'" + FlowRuleName + "'-not-found-on-ma-" + maName);
                 foreach (FlowRule r in rules) Tracer.TraceInformation("found-rule name: {0}, description: {1}", r.Name, r.Description);
                 FlowRule rule = rules.Where(ru => ru.Conditions.AreMet(csentry, mventry)).FirstOrDefault();
-                if (rule == null) throw new DeclineMappingException("no-" + direction.ToString() + "-rule-'" + FlowRuleName + "'-not-found-on-ma-'" + maName + "'-where-conditions-were-met");
+                if (rule == null) throw new DeclineMappingException("no-" + direction.ToString() + "-rule-'" + FlowRuleName + "'-found-on-ma-'" + maName + "'-where-conditions-were-met");
 
                 #region FlowRuleDefault
                 if (rule.GetType().Equals(typeof(FlowRule)))

@@ -97,6 +97,7 @@
     <Compile Include="Model\ManagementAgent.cs" />
     <Compile Include="Model\Source.cs" />
     <Compile Include="Model\Transforms.cs" />
+    <Compile Include="Model\Transforms\Transforms.DateTime.Add.cs" />
     <Compile Include="Model\Transforms\Transforms.Not.cs" />
     <Compile Include="Tracer.cs" />
   </ItemGroup>

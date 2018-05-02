@@ -68,10 +68,31 @@ namespace FIM.MARE
 		[XmlAttribute("Name")]
 		public string Name { get; set; }
 
+		[XmlAttribute("RetrieveFrom")]
+		public string RetrieveFrom { get; set; }
+
 		public string GetValueOrDefault(Direction direction, CSEntry csentry, MVEntry mventry)
 		{
 			string value = this.DefaultValue;
 			bool sourceValueIsPresent = false;
+			if (!string.IsNullOrEmpty(this.RetrieveFrom))
+			{
+				// override direction
+				switch (RetrieveFrom)
+				{
+					case "CS":
+						direction = Direction.Import;
+						Tracer.TraceInformation("retrieve-attribute-value-from: name: {0}, {1} / {2}", Name, direction, RetrieveFrom);
+						break;
+					case "MV":
+						direction = Direction.Export;
+						Tracer.TraceInformation("retrieve-attribute-value-from: name: {0}, {1} / {2}", Name, direction, RetrieveFrom);
+						break;
+					default:
+						Tracer.TraceWarning("override-source-input-value-to: INVALID (use CS or MV)");
+						break;
+				}
+			}
 			if (Name.Equals("[DN]") || Name.Equals("[RDN]") || Name.Equals("[ObjectType]") || Name.Equals("[ConnectionChangeTime]"))
 			{
 				sourceValueIsPresent = true;
