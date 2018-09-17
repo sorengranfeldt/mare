@@ -9,7 +9,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ApplicationIcon />
     <AssemblyKeyContainerName />
-    <AssemblyName>FIM.MARE</AssemblyName>
+    <AssemblyName>ma.ad.FIM.MARE</AssemblyName>
     <AssemblyOriginatorKeyFile />
     <AssemblyOriginatorKeyMode>None</AssemblyOriginatorKeyMode>
     <DefaultClientScript>JScript</DefaultClientScript>
@@ -87,7 +87,16 @@
     <Compile Include="FIM.MARE.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Model\Conditions.cs" />
+    <Compile Include="Model\Conditions\Condition.IsNotPresent.cs" />
+    <Compile Include="Model\Conditions\Condition.NotConnectedTo.cs" />
+    <Compile Include="Model\Conditions\Condition.ConnectedTo.cs" />
+    <Compile Include="Model\Conditions\Condition.TargetValueMatch.cs" />
+    <Compile Include="Model\Conditions\Condition.ObjectClassNotMatch.cs" />
+    <Compile Include="Model\Conditions\Condition.SourceValueMatch.cs" />
+    <Compile Include="Model\Conditions\Condition.ObjectClassMatch.cs" />
+    <Compile Include="Model\Conditions\Condition.SourceValueNotMatch.cs" />
+    <Compile Include="Model\Conditions\Conditions.cs" />
+    <Compile Include="Model\Conditions\Condition.IsPresent.cs" />
     <Compile Include="Model\Configuration.cs" />
     <Compile Include="Model\ConfigurationManager.cs" />
     <Compile Include="Model\JoinRule.cs" />
@@ -96,9 +105,38 @@
     <Compile Include="Model\FlowRules.cs" />
     <Compile Include="Model\ManagementAgent.cs" />
     <Compile Include="Model\Source.cs" />
-    <Compile Include="Model\Transforms.cs" />
-    <Compile Include="Model\Transforms\Transforms.DateTime.Add.cs" />
-    <Compile Include="Model\Transforms\Transforms.Not.cs" />
+    <Compile Include="Model\Transforms\Transform.IsBitNotSet.cs" />
+    <Compile Include="Model\Transforms\Transform.LookupMVValue.cs" />
+    <Compile Include="Model\Transforms\Transform.FormatDate.cs" />
+    <Compile Include="Model\Transforms\Transform.IsBeforeOrAfter.cs" />
+    <Compile Include="Model\Transforms\Transform.MultivalueConcatenate.cs" />
+    <Compile Include="Model\Transforms\Transform.MultiValueRemoveIfNotMatch.cs" />
+    <Compile Include="Model\Transforms\Transform.MultiValueRemoveIfMatch.cs" />
+    <Compile Include="Model\Transforms\Transform.StringFormat.cs" />
+    <Compile Include="Model\Transforms\Transform.StringCase.cs" />
+    <Compile Include="Model\Transforms\Transform.RegexSelect.cs" />
+    <Compile Include="Model\Transforms\Transform.Substring.cs" />
+    <Compile Include="Model\Transforms\Transform.RegexIsMatch.cs" />
+    <Compile Include="Model\Transforms\Transform.RegexReplace.cs" />
+    <Compile Include="Model\Transforms\Transform.SIDToString.cs" />
+    <Compile Include="Model\Transforms\Transform.PadRight.cs" />
+    <Compile Include="Model\Transforms\Transform.PadLeft.cs" />
+    <Compile Include="Model\Transforms\Transform.ReplaceAfter.cs" />
+    <Compile Include="Model\Transforms\Transform.ReplaceBefore.cs" />
+    <Compile Include="Model\Transforms\Transform.Replace.cs" />
+    <Compile Include="Model\Transforms\Transform.TrimStart.cs" />
+    <Compile Include="Model\Transforms\Transform.TrimEnd.cs" />
+    <Compile Include="Model\Transforms\Transform.Trim.cs" />
+    <Compile Include="Model\Transforms\Transform.ToUpper.cs" />
+    <Compile Include="Model\Transforms\Transform.ToLower.cs" />
+    <Compile Include="Model\Transforms\Transform.RightString.cs" />
+    <Compile Include="Model\Transforms\Transform.LeftString.cs" />
+    <Compile Include="Model\Transforms\Transform.SetBit.cs" />
+    <Compile Include="Model\Transforms\Transform.IsBitSet.cs" />
+    <Compile Include="Model\Transforms\Transforms.cs" />
+    <Compile Include="Model\Transforms\Transform.DateTimeAdd.cs" />
+    <Compile Include="Model\Transforms\Transform.Base64ToGuid.cs" />
+    <Compile Include="Model\Transforms\Transform.Not.cs" />
     <Compile Include="Tracer.cs" />
   </ItemGroup>
   <ItemGroup>

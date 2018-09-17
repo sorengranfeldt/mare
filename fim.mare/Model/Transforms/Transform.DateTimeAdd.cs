@@ -1,20 +1,13 @@
 ﻿// may 2, 2018 | soren granfeldt
 //  - added DateTimeAdd transform
 
-using Microsoft.MetadirectoryServices;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.Linq;
-using System.Security.Principal;
-using System.Text.RegularExpressions;
 using System.Xml.Serialization;
 
 namespace FIM.MARE
 {
 
-	public class DateTimeAdd : Transform
+    public class DateTimeAdd : Transform
 	{
 		[XmlAttribute("AddSeconds")]
 		public int AddSeconds { get; set; }

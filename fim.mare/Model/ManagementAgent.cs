@@ -43,7 +43,6 @@ namespace FIM.MARE
 			Tracer.TraceInformation("enter-loadassembly");
 			try
 			{
-
 				{
 					Tracer.TraceInformation("loading-assembly {0}", Path.Combine(Utils.ExtensionsDirectory, this.CustomDLL));
 #if DEBUG
@@ -52,7 +51,7 @@ namespace FIM.MARE
 					this.Assembly = Assembly.LoadFile(Path.Combine(Utils.ExtensionsDirectory, this.CustomDLL));
 #endif
 					Type[] types = Assembly.GetExportedTypes();
-					Type type = types.Where(u => u.GetInterface("Microsoft.MetadirectoryServices.IMASynchronization") != null).FirstOrDefault();
+					Type type = types.FirstOrDefault(u => u.GetInterface("Microsoft.MetadirectoryServices.IMASynchronization") != null);
 					if (type != null)
 					{
 						instance = Activator.CreateInstance(type) as IMASynchronization;

@@ -1,5 +1,5 @@
 ﻿// feb 10, 2016 | soren granfeldt
-//	-added Description attribute to flowrule to allow for better loggin information
+//	-added Description attribute to flowrule to allow for better logging information
 
 using System.Xml.Serialization;
 

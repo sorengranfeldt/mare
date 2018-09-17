@@ -195,7 +195,7 @@ namespace FIM.MARE
             {
                 if (rules != null)
                 {
-                    rules.Clear();
+                    rules?.Clear();
                     rules = null;
                 }
                 Tracer.TraceInformation("exit-deprovision");
