@@ -17,6 +17,8 @@
 //	- added logging of version information to instantiation function
 // feb 10, 2016 | soren granfeldt
 //	- added logging of flowrule description for better debugging when more than one rule with same name
+// september 26, 2018 | soren granfeldt
+//	- added catch to handle DeclineMappingException more gracefully (will no show information instead of logging error / fill eventlog)
 
 using Microsoft.MetadirectoryServices;
 using System;
@@ -71,7 +73,7 @@ namespace FIM.MARE
         }
         void IMASynchronization.Terminate()
         {
-            Tracer.TraceInformation("enter-terminate");
+            Tracer.Enter("terminate");
             try
             {
                 config = null;
@@ -86,7 +88,7 @@ namespace FIM.MARE
             }
             finally
             {
-                Tracer.TraceInformation("exit-terminate");
+                Tracer.Exit("terminate");
             }
         }
 
@@ -166,7 +168,7 @@ namespace FIM.MARE
                 string maName = csentry.MA.Name;
                 Tracer.TraceInformation("ma: {1}, dn: {2}", maName, csentry.DN);
 
-                ManagementAgent ma = config.ManagementAgent.Where(m => m.Name.Equals(maName)).FirstOrDefault();
+                ManagementAgent ma = config.ManagementAgent.FirstOrDefault(m => m.Name.Equals(maName));
                 if (ma == null) throw new NotImplementedException("management-agent-" + maName + "-not-found");
 
                 rules = ma.DeprovisionRule.DeprovisionOption.ToList<DeprovisionOption>();
@@ -212,12 +214,12 @@ namespace FIM.MARE
                 string maName = csentry.MA.Name;
                 Tracer.TraceInformation("mvobjectid: {0}, ma: {1}, rule: {2}", mventry.ObjectID, maName, FlowRuleName);
 
-                ManagementAgent ma = config.ManagementAgent.Where(m => m.Name.Equals(maName)).FirstOrDefault();
+                ManagementAgent ma = config.ManagementAgent.FirstOrDefault(m => m.Name.Equals(maName));
                 if (ma == null) throw new NotImplementedException("management-agent-" + maName + "-not-found");
                 rules = ma.FlowRule.Where(r => r.Name.Equals(FlowRuleName) && r.Direction.Equals(direction)).ToList<FlowRule>();
                 if (rules == null) throw new NotImplementedException(direction.ToString() + "-rule-'" + FlowRuleName + "'-not-found-on-ma-" + maName);
                 foreach (FlowRule r in rules) Tracer.TraceInformation("found-rule name: {0}, description: {1}", r.Name, r.Description);
-                FlowRule rule = rules.Where(ru => ru.Conditions.AreMet(csentry, mventry)).FirstOrDefault();
+                FlowRule rule = rules.FirstOrDefault(ru => ru.Conditions.AreMet(csentry, mventry));
                 if (rule == null) throw new DeclineMappingException("no-" + direction.ToString() + "-rule-'" + FlowRuleName + "'-found-on-ma-'" + maName + "'-where-conditions-were-met");
 
                 #region FlowRuleDefault
@@ -236,6 +238,10 @@ namespace FIM.MARE
                 #endregion
 
                 rule = null;
+            }
+            catch (DeclineMappingException dme)
+            {
+                Tracer.TraceInformation("mapattributesforimportexportdetached {0}", dme.GetBaseException());
             }
             catch (Exception ex)
             {
