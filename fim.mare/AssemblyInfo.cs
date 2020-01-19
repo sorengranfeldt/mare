@@ -16,7 +16,7 @@ using System.Runtime.CompilerServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Goverco")]
 [assembly: AssemblyProduct("FIM.MARE")]
-[assembly: AssemblyCopyright("Copyright © 2015-2018, Soren Granfeldt")]
+[assembly: AssemblyCopyright("Copyright © 2015-2020, Soren Granfeldt")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -31,7 +31,7 @@ using System.Runtime.CompilerServices;
 // You can specify all the values or you can default the Revision and Build Numbers
 // by using the '*' as shown below:
 
-[assembly: AssemblyVersion("1.2.2609.*")]
+[assembly: AssemblyVersion("1.2.2612.*")]
 
 //
 // In order to sign your assembly you must specify a key to use. Refer to the

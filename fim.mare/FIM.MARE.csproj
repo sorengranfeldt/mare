@@ -9,7 +9,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ApplicationIcon />
     <AssemblyKeyContainerName />
-    <AssemblyName>ma.ad.FIM.MARE</AssemblyName>
+    <AssemblyName>FIM.MARE</AssemblyName>
     <AssemblyOriginatorKeyFile />
     <AssemblyOriginatorKeyMode>None</AssemblyOriginatorKeyMode>
     <DefaultClientScript>JScript</DefaultClientScript>
@@ -108,6 +108,7 @@
     <Compile Include="Model\FlowRules.cs" />
     <Compile Include="Model\ManagementAgent.cs" />
     <Compile Include="Model\Source.cs" />
+    <Compile Include="Model\Transforms\Transform.Base64ToGuidFormat.cs" />
     <Compile Include="Model\Transforms\Transform.IsBitNotSet.cs" />
     <Compile Include="Model\Transforms\Transform.LookupMVValue.cs" />
     <Compile Include="Model\Transforms\Transform.FormatDate.cs" />
@@ -127,6 +128,7 @@
     <Compile Include="Model\Transforms\Transform.ReplaceAfter.cs" />
     <Compile Include="Model\Transforms\Transform.ReplaceBefore.cs" />
     <Compile Include="Model\Transforms\Transform.Replace.cs" />
+    <Compile Include="Model\Transforms\Transform.ToFileTimeUTC.cs" />
     <Compile Include="Model\Transforms\Transform.TrimStart.cs" />
     <Compile Include="Model\Transforms\Transform.TrimEnd.cs" />
     <Compile Include="Model\Transforms\Transform.Trim.cs" />

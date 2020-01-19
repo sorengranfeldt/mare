@@ -7,8 +7,10 @@
 //	- change type of data flowing through transforms from string to object to support multivalues
 // december 7, 2015 | soren granfeldt
 //	- added ReplaceBefore and ReplaceAfter
-// januar 28, 2016 | soren granfeldt
-//	-fixed FromValueCollection to handle single value flowed to multivalued
+// january 28, 2016 | soren granfeldt
+//	- fixed FromValueCollection to handle single value flowed to multivalued
+// january 14, 2020 | soren granfeldt
+//	- added XmlInclude ToFileTimeUTC and Base64ToGUIDFormat
 
 using Microsoft.MetadirectoryServices;
 using System.Collections.Generic;
@@ -47,7 +49,9 @@ namespace FIM.MARE
         XmlInclude(typeof(RightString)),
         XmlInclude(typeof(LeftString)),
         XmlInclude(typeof(StringFormat)),
-        XmlInclude(typeof(Not))
+        XmlInclude(typeof(Not)),
+        XmlInclude(typeof(ToFileTimeUTC)),
+        XmlInclude(typeof(Base64ToGUIDFormat))
     ]
     public abstract class Transform
     {
