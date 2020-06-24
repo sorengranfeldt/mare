@@ -116,9 +116,11 @@
     <Compile Include="Model\Transforms\Transform.MultivalueConcatenate.cs" />
     <Compile Include="Model\Transforms\Transform.MultiValueRemoveIfNotMatch.cs" />
     <Compile Include="Model\Transforms\Transform.MultiValueRemoveIfMatch.cs" />
+    <Compile Include="Model\Transforms\Transform.ConvertFromTrueFalse.cs" />
     <Compile Include="Model\Transforms\Transform.StringFormat.cs" />
     <Compile Include="Model\Transforms\Transform.StringCase.cs" />
     <Compile Include="Model\Transforms\Transform.RegexSelect.cs" />
+    <Compile Include="Model\Transforms\Transform.Word.cs" />
     <Compile Include="Model\Transforms\Transform.Substring.cs" />
     <Compile Include="Model\Transforms\Transform.RegexIsMatch.cs" />
     <Compile Include="Model\Transforms\Transform.RegexReplace.cs" />

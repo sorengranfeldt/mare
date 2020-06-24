@@ -51,7 +51,9 @@ namespace FIM.MARE
         XmlInclude(typeof(StringFormat)),
         XmlInclude(typeof(Not)),
         XmlInclude(typeof(ToFileTimeUTC)),
-        XmlInclude(typeof(Base64ToGUIDFormat))
+        XmlInclude(typeof(Base64ToGUIDFormat)),
+        XmlInclude(typeof(ConvertFromTrueFalse)),
+        XmlInclude(typeof(Word))
     ]
     public abstract class Transform
     {

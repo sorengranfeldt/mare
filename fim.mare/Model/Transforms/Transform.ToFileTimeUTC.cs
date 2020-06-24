@@ -1,7 +1,7 @@
 ﻿// january 14, 2020 | soren granfeldt
 //	- initial version
 // january 23, 2020 | soren granfeldt
-//	- initial version
+//	- added FromTimeZone parameter
 
 namespace FIM.MARE
 {
