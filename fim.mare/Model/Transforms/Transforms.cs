@@ -41,6 +41,7 @@ namespace FIM.MARE
         XmlInclude(typeof(SetBit)),
         XmlInclude(typeof(LookupMVValue)),
         XmlInclude(typeof(MultiValueConcatenate)),
+        XmlInclude(typeof(MultiValueContains)),
         XmlInclude(typeof(MultiValueRemoveIfNotMatch)),
         XmlInclude(typeof(MultiValueRemoveIfMatch)),
         XmlInclude(typeof(ReplaceBefore)),
