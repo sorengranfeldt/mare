@@ -11,6 +11,8 @@
 //	- fixed FromValueCollection to handle single value flowed to multivalued
 // january 14, 2020 | soren granfeldt
 //	- added XmlInclude ToFileTimeUTC and Base64ToGUIDFormat
+// february 17, 2021 | soren granfeldt
+//  - added XmlInclude MultiValueReplace
 
 using Microsoft.MetadirectoryServices;
 using System.Collections.Generic;
@@ -43,6 +45,7 @@ namespace FIM.MARE
         XmlInclude(typeof(MultiValueConcatenate)),
         XmlInclude(typeof(MultiValueRemoveIfNotMatch)),
         XmlInclude(typeof(MultiValueRemoveIfMatch)),
+        XmlInclude(typeof(MultiValueReplace)),
         XmlInclude(typeof(ReplaceBefore)),
         XmlInclude(typeof(ReplaceAfter)),
         XmlInclude(typeof(IsBeforeOrAfter)),
