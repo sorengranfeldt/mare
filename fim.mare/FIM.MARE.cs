@@ -317,32 +317,154 @@ namespace FIM.MARE
             {
                 FlowRule r = (FlowRule)rule;
                 object targetValue = null;
-                foreach (Value value in r.SourceExpression.Source)
+
+                if (rule.Direction == Direction.Import && mventry[r.Target.Name].IsMultivalued)
                 {
-                    if (value.GetType().Equals(typeof(MultiValueAttribute)))
+                    List<object> listTargetValue = new List<object>();
+
+                    foreach (Value value in r.SourceExpression.Source)
                     {
-                        MultiValueAttribute attr = (MultiValueAttribute)value;
-                        object mv = attr.GetValueOrDefault(r.Direction, csentry, mventry);
-                        targetValue = attr.Transform(mv, TransformDirection.Source);
+                        string attributeName="",otherConnector="";
+
+                        if (value.GetType().Equals(typeof(Constant)))
+                        {
+                            var attr = (Constant)value;
+                            otherConnector = attr.FromOtherConnector;
+                            if (!string.IsNullOrEmpty(otherConnector))
+                            {
+                                ConnectedMA ConnectedManagementAgent = mventry.ConnectedMAs[otherConnector];
+                                if (ConnectedManagementAgent == null)
+                                {
+                                    Tracer.TraceWarning("Unable to find external Connector", 1, "");
+                                    continue;
+                                }
+
+                                foreach (CSEntry ConnectorSpaceEntry in ConnectedManagementAgent.Connectors)
+                                {
+                                    if (ConnectorSpaceEntry.MA.Name == otherConnector)
+                                    {
+                                        listTargetValue.Add(((Constant)value).Value);
+                                        break;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                listTargetValue.Add(((Constant)value).Value);
+                            }
+                            continue;
+                        }
+
+                        else if (value.GetType().Equals(typeof(MultiValueAttribute)))
+                        {
+                            var attr = (MultiValueAttribute)value;
+                            attributeName = attr.Name;
+                            otherConnector = attr.FromOtherConnector;
+
+                            if (string.IsNullOrEmpty(attributeName))
+                                continue;
+                        }
+                        else if (value.GetType().Equals(typeof(Attribute)))
+                        {
+                            var attr = (Attribute)value;
+                            attributeName = attr.Name;
+                            otherConnector = attr.FromOtherConnector;
+
+                            if (string.IsNullOrEmpty(attributeName))
+                                continue;
+                        }
+
+                        if (!string.IsNullOrEmpty(otherConnector))
+                        {
+                            ConnectedMA ConnectedManagementAgent = mventry.ConnectedMAs[otherConnector];
+                            if (ConnectedManagementAgent == null)
+                            {
+                                Tracer.TraceWarning("Unable to find external Connector {0}", 1, otherConnector);
+                                continue;
+                            }
+
+                            foreach (CSEntry ConnectorSpaceEntry in ConnectedManagementAgent.Connectors)
+                            {
+                                var found = false;
+                                try
+                                {
+                                    found = ConnectorSpaceEntry[attributeName].IsPresent;
+                                }
+                                catch (Exception)
+                                {
+                                    Tracer.TraceWarning("Unable to find Attribute {0} for external Connector {1}", 1, attributeName, ConnectedManagementAgent.Name);
+                                }
+
+                                if (!found)
+                                {
+                                    Tracer.TraceInformation("Attribute {0} not present for external Connector {1}", 1, attributeName, ConnectedManagementAgent.Name);
+                                    continue;
+                                }
+                                   
+                                if (ConnectorSpaceEntry[attributeName].IsMultivalued)
+                                {
+                                    foreach (Microsoft.MetadirectoryServices.Value val in ConnectorSpaceEntry[attributeName].Values)
+                                    {
+                                        listTargetValue.Add(val.ToString());
+                                    }
+                                }
+                                else
+                                {
+                                    listTargetValue.Add(ConnectorSpaceEntry[attributeName].Value.ToString());
+                                }
+                            }
+
+                        }
+                        else
+                        {
+                            if (!csentry[attributeName].IsPresent)
+                                continue;
+                            if (csentry[attributeName].IsMultivalued)
+                            {
+                                foreach (var v in csentry[attributeName].Values)
+                                {
+                                    listTargetValue.Add(v.ToString());
+                                }
+                            }
+                            else
+                            {
+                                listTargetValue.Add(csentry[attributeName].Value);
+                            }
+                        }
                     }
-                    if (value.GetType().Equals(typeof(Attribute)))
-                    {
-                        Attribute attr = (Attribute)value;
-                        object concateValue = attr.GetValueOrDefault(r.Direction, csentry, mventry);
-                        concateValue = attr.Transform(concateValue, TransformDirection.Source);
-                        targetValue = targetValue as string + concateValue;
-                        attr = null;
-                        continue;
-                    }
-                    if (value.GetType().Equals(typeof(Constant)))
-                    {
-                        targetValue = targetValue + ((Constant)value).Value;
-                        continue;
-                    }
+                    targetValue = r.Target.Transform(listTargetValue, TransformDirection.Target);
+                    r.Target.SetTargetValue(r.Direction, csentry, mventry, targetValue);
+                    r = null;
                 }
-                targetValue = r.Target.Transform(targetValue, TransformDirection.Target);
-                r.Target.SetTargetValue(r.Direction, csentry, mventry, targetValue);
-                r = null;
+                else
+                {
+                    foreach (Value value in r.SourceExpression.Source)
+                    {
+                        if (value.GetType().Equals(typeof(MultiValueAttribute)))
+                        {
+                            MultiValueAttribute attr = (MultiValueAttribute)value;
+                            object mv = attr.GetValueOrDefault(r.Direction, csentry, mventry);
+                            targetValue = attr.Transform(mv, TransformDirection.Source);
+                        }
+                        if (value.GetType().Equals(typeof(Attribute)))
+                        {
+                            Attribute attr = (Attribute)value;
+                            object concateValue = attr.GetValueOrDefault(r.Direction, csentry, mventry);
+                            concateValue = attr.Transform(concateValue, TransformDirection.Source);
+                            targetValue = targetValue as string + concateValue;
+                            attr = null;
+                            continue;
+                        }
+                        if (value.GetType().Equals(typeof(Constant)))
+                        {
+                            targetValue = targetValue + ((Constant)value).Value;
+                            continue;
+                        }
+                    }
+                    targetValue = r.Target.Transform(targetValue, TransformDirection.Target);
+                    r.Target.SetTargetValue(r.Direction, csentry, mventry, targetValue);
+                    r = null;
+                }
             }
             catch (Exception ex)
             {

@@ -72,6 +72,14 @@
       <Target Name="mail" ActionOnNullSource="Delete" />
     </FlowRule>
 
+    <FlowRule Name="MergeAllAddresses" Direction="Import" xsi:type="FlowRule">
+      <SourceExpression>
+        <Source Name="mail" xsi:type="Attribute" />
+        <Source Name="mail" xsi:type="Attribute" FromOtherConnector="ad2" />
+      </SourceExpression>
+      <Target Name="email" ActionOnNullSource="None" />
+    </FlowRule>
+	  
     <FlowRule Name="AccountName" Direction="Export" xsi:type="FlowRule">
       <Conditions Operator="Or">
         <Condition xsi:type="ObjectClassMatch" Source="CSEntry" Pattern="^person$" />
