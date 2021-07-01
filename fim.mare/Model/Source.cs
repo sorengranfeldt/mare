@@ -1,4 +1,4 @@
-﻿// october 16, 2015 | soren granfeldt
+// october 16, 2015 | soren granfeldt
 //	-added support for updating multivalues
 //	-added multivalue attribute type
 // januar 28, 2016 | soren granfeldt
@@ -8,8 +8,8 @@
 using Microsoft.MetadirectoryServices;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Xml.Serialization;
+using System.Linq;
 
 namespace FIM.MARE
 {
@@ -71,7 +71,10 @@ namespace FIM.MARE
 		[XmlAttribute("RetrieveFrom")]
 		public string RetrieveFrom { get; set; }
 
-		public string GetValueOrDefault(Direction direction, CSEntry csentry, MVEntry mventry)
+        [XmlAttribute("FromOtherConnector")]
+        public string FromOtherConnector { get; set; }
+
+        public string GetValueOrDefault(Direction direction, CSEntry csentry, MVEntry mventry)
 		{
 			string value = this.DefaultValue;
 			bool sourceValueIsPresent = false;
@@ -263,12 +266,19 @@ namespace FIM.MARE
 	{
 		[XmlAttribute("Value")]
 		public string Value { get; set; }
-	}
+
+        [XmlAttribute("FromOtherConnector")]
+        public string FromOtherConnector { get; set; }
+    }
 	public class MultiValueAttribute : Value
 	{
 		[XmlAttribute("Name")]
 		public string Name { get; set; }
-		public object GetValueOrDefault(Direction direction, CSEntry csentry, MVEntry mventry)
+
+        [XmlAttribute("FromOtherConnector")]
+        public string FromOtherConnector { get; set; }
+
+        public object GetValueOrDefault(Direction direction, CSEntry csentry, MVEntry mventry)
 		{
 			object value = this.DefaultValue;
 			bool sourceValueIsPresent = direction.Equals(Direction.Import) ? csentry[Name].IsPresent : mventry[Name].IsPresent;
