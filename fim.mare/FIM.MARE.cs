@@ -312,159 +312,142 @@ namespace FIM.MARE
 
         public void InvokeFlowRule(FlowRule rule, CSEntry csentry, MVEntry mventry)
         {
-            Tracer.TraceInformation("enter-invokeflowrule {0}", rule.Name);
+            Tracer.TraceWarning("enter-invokeflowrule {0}", 1, rule.Name); // TODO: revert to TraceInformation
             try
             {
                 FlowRule r = (FlowRule)rule;
-                object targetValue = null;
+                // Initiate an empty list of values
+                List<object> listTargetValue = new List<object>();
 
-                if (rule.Direction == Direction.Import && mventry[r.Target.Name].IsMultivalued)
+                foreach (Value source in r.SourceExpression.Source)
                 {
-                    List<object> listTargetValue = new List<object>();
-
-                    foreach (Value value in r.SourceExpression.Source)
+                    if (source.GetType().Equals(typeof(MultiValueAttribute)))
                     {
-                        string attributeName="",otherConnector="";
-
-                        if (value.GetType().Equals(typeof(Constant)))
+                        // Step 1: Get Source object and value
+                        object val = null;
+                        if (string.IsNullOrEmpty(source.FromOtherConnector))
                         {
-                            var attr = (Constant)value;
-                            otherConnector = attr.FromOtherConnector;
-                            if (!string.IsNullOrEmpty(otherConnector))
-                            {
-                                ConnectedMA ConnectedManagementAgent = mventry.ConnectedMAs[otherConnector];
-                                if (ConnectedManagementAgent == null)
-                                {
-                                    Tracer.TraceWarning("Unable to find external Connector", 1, "");
-                                    continue;
-                                }
-
-                                foreach (CSEntry ConnectorSpaceEntry in ConnectedManagementAgent.Connectors)
-                                {
-                                    if (ConnectorSpaceEntry.MA.Name == otherConnector)
-                                    {
-                                        listTargetValue.Add(((Constant)value).Value);
-                                        break;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                listTargetValue.Add(((Constant)value).Value);
-                            }
-                            continue;
-                        }
-
-                        else if (value.GetType().Equals(typeof(MultiValueAttribute)))
-                        {
-                            var attr = (MultiValueAttribute)value;
-                            attributeName = attr.Name;
-                            otherConnector = attr.FromOtherConnector;
-
-                            if (string.IsNullOrEmpty(attributeName))
-                                continue;
-                        }
-                        else if (value.GetType().Equals(typeof(Attribute)))
-                        {
-                            var attr = (Attribute)value;
-                            attributeName = attr.Name;
-                            otherConnector = attr.FromOtherConnector;
-
-                            if (string.IsNullOrEmpty(attributeName))
-                                continue;
-                        }
-
-                        if (!string.IsNullOrEmpty(otherConnector))
-                        {
-                            ConnectedMA ConnectedManagementAgent = mventry.ConnectedMAs[otherConnector];
-                            if (ConnectedManagementAgent == null)
-                            {
-                                Tracer.TraceWarning("Unable to find external Connector {0}", 1, otherConnector);
-                                continue;
-                            }
-
-                            foreach (CSEntry ConnectorSpaceEntry in ConnectedManagementAgent.Connectors)
-                            {
-                                var found = false;
-                                try
-                                {
-                                    found = ConnectorSpaceEntry[attributeName].IsPresent;
-                                }
-                                catch (Exception)
-                                {
-                                    Tracer.TraceWarning("Unable to find Attribute {0} for external Connector {1}", 1, attributeName, ConnectedManagementAgent.Name);
-                                }
-
-                                if (!found)
-                                {
-                                    Tracer.TraceInformation("Attribute {0} not present for external Connector {1}", 1, attributeName, ConnectedManagementAgent.Name);
-                                    continue;
-                                }
-                                   
-                                if (ConnectorSpaceEntry[attributeName].IsMultivalued)
-                                {
-                                    foreach (Microsoft.MetadirectoryServices.Value val in ConnectorSpaceEntry[attributeName].Values)
-                                    {
-                                        listTargetValue.Add(val.ToString());
-                                    }
-                                }
-                                else
-                                {
-                                    listTargetValue.Add(ConnectorSpaceEntry[attributeName].Value.ToString());
-                                }
-                            }
-
+                            Tracer.TraceWarning("Getting values from local connector, MultiValueAttribute {0}...", 1, ((MultiValueAttribute)source).Name); //TODO: remove this line
+                            val = ((MultiValueAttribute)source).GetValueOrDefault(r.Direction, csentry, mventry);
                         }
                         else
                         {
-                            if (!csentry[attributeName].IsPresent)
+                            // Lookup csentry in other CS
+                            Tracer.TraceWarning("Getting values from connector {0}, MultiValueAttribute {1}", 1, source.FromOtherConnector, ((MultiValueAttribute)source).Name); //TODO: remove this line
+                            ConnectedMA ConnectedManagementAgent = mventry.ConnectedMAs[source.FromOtherConnector];
+                            if (ConnectedManagementAgent == null)
+                            {
+                                Tracer.TraceWarning("Unable to find external Connector {0}", 1, source.FromOtherConnector);
                                 continue;
-                            if (csentry[attributeName].IsMultivalued)
-                            {
-                                foreach (var v in csentry[attributeName].Values)
-                                {
-                                    listTargetValue.Add(v.ToString());
-                                }
                             }
-                            else
+
+                            Tracer.TraceWarning("Found {0} connector(s) in MA {1}", 1, ConnectedManagementAgent.Connectors.Count, source.FromOtherConnector); //TODO: remove this line
+                            // In some cases, several connectors might be connected to a single metaverse object so we get one of them
+                            foreach (CSEntry ConnectorSpaceEntry in ConnectedManagementAgent.Connectors)
                             {
-                                listTargetValue.Add(csentry[attributeName].Value);
+                                Tracer.TraceWarning("Reading attribute {1} on {0}", 1, ConnectorSpaceEntry.ToString(), ((MultiValueAttribute)source).Name); //TODO: remove this line
+                                val = ((MultiValueAttribute)source).GetValueOrDefault(r.Direction, ConnectorSpaceEntry, mventry);
                             }
                         }
+
+                        // Step 2: Apply Transforms on Source Attribute
+                        if (val != null)
+                        {
+                            // Step 2: Apply Transforms on Source Attribute
+                            Tracer.TraceWarning("Applying transforms on source MultiValueAttribute..."); //TODO: remove this line
+                            Object concateValue = source.Transform(val, TransformDirection.Source);
+
+                            // Step 3: Add (transformed) value to list
+                            Tracer.TraceInformation("Appending values to target attribute...");
+                            foreach (string item in ((ValueCollection)concateValue).ToStringArray())
+                            {
+                                listTargetValue.Add(item);
+                            }
+                        }
+                        else
+                        {
+                            Tracer.TraceInformation("No value found.");
+                        }
                     }
-                    targetValue = r.Target.Transform(listTargetValue, TransformDirection.Target);
-                    r.Target.SetTargetValue(r.Direction, csentry, mventry, targetValue);
-                    r = null;
-                }
-                else
-                {
-                    foreach (Value value in r.SourceExpression.Source)
+                    else if (source.GetType().Equals(typeof(Attribute)))
                     {
-                        if (value.GetType().Equals(typeof(MultiValueAttribute)))
+                        // Step 1: Get Source object and value
+                        string val = null;
+                        if (string.IsNullOrEmpty(source.FromOtherConnector))
                         {
-                            MultiValueAttribute attr = (MultiValueAttribute)value;
-                            object mv = attr.GetValueOrDefault(r.Direction, csentry, mventry);
-                            targetValue = attr.Transform(mv, TransformDirection.Source);
+                            Tracer.TraceWarning("Getting value from local connector, Attribute {0}...", 1, ((Attribute)source).Name); //TODO: remove this line
+                            val = ((Attribute)source).GetValueOrDefault(r.Direction, csentry, mventry);
                         }
-                        if (value.GetType().Equals(typeof(Attribute)))
+                        else
                         {
-                            Attribute attr = (Attribute)value;
-                            object concateValue = attr.GetValueOrDefault(r.Direction, csentry, mventry);
-                            concateValue = attr.Transform(concateValue, TransformDirection.Source);
-                            targetValue = targetValue as string + concateValue;
-                            attr = null;
-                            continue;
+                            // Lookup csentry in other CS
+                            ConnectedMA ConnectedManagementAgent = mventry.ConnectedMAs[source.FromOtherConnector];
+                            if (ConnectedManagementAgent == null)
+                            {
+                                Tracer.TraceWarning("Unable to find external Connector {0}", 1, source.FromOtherConnector);
+                                continue;
+                            }
+
+                            Tracer.TraceInformation("Found {0} connector(s) in MA {1}", ConnectedManagementAgent.Connectors.Count, source.FromOtherConnector);
+                            // In some cases, several connectors might be connected to a single metaverse object so we get one of them
+                            foreach (CSEntry ConnectorSpaceEntry in ConnectedManagementAgent.Connectors)
+                            {
+                                Tracer.TraceInformation("Reading attribute {1} on {0}", ConnectorSpaceEntry.ToString(), ((Attribute)source).Name);
+                                val = ((Attribute)source).GetValueOrDefault(r.Direction, ConnectorSpaceEntry, mventry);
+                            }
                         }
-                        if (value.GetType().Equals(typeof(Constant)))
+
+                        if (!string.IsNullOrEmpty(val))
                         {
-                            targetValue = targetValue + ((Constant)value).Value;
-                            continue;
+                            // Step 2: Apply Transforms on Source Attribute
+                            Tracer.TraceInformation("Applying transforms on source Attribute...");
+                            Object concateValue = source.Transform(val, TransformDirection.Source);
+
+                            // Step 3: Add (transformed) value to list
+                            Tracer.TraceInformation("Appending value {0} to target attribute...", concateValue);
+                            listTargetValue.Add(concateValue.ToString());
+                        }
+                        else
+                        {
+                            Tracer.TraceInformation("No value found.");
                         }
                     }
-                    targetValue = r.Target.Transform(targetValue, TransformDirection.Target);
-                    r.Target.SetTargetValue(r.Direction, csentry, mventry, targetValue);
-                    r = null;
+                    else if (source.GetType().Equals(typeof(Constant)))
+                    {
+                        // Step 1: Get Source object and value
+                        string attr = "";
+                        if (string.IsNullOrEmpty(source.FromOtherConnector))
+                        {
+                            attr = source.ToString();
+                        }
+                        else
+                        {
+                            // TODO: if FromOtherConnector is defined, look for a CSEntry in this connector.
+                            Tracer.TraceError("FromOtherConnector is currently not implemented for Constant.");
+                        }
+
+                        // Step 2: Apply Transforms on Source Attribute
+                        // No transform on Constant
+
+                        // Step 3: Add (transformed) value to list
+                        listTargetValue.Add(attr);
+                    }
                 }
+
+
+                // Step 4: If Target if monovalued, concatenate value to get a String
+                // TODO: Implement concatenation
+                //if (rule.Direction == Direction.Import && mventry[r.Target.Name].IsMultivalued || 
+                //    rule.Direction == Direction.Export && csentry[r.Target.Name].IsMultivalued)
+
+                // Step 5: Apply Transforms on Target
+                Tracer.TraceWarning("Applying transforms on target...", 1);
+                List<object>transformedValues = (List<object>)r.Target.Transform(listTargetValue, TransformDirection.Target);
+
+                // Finally, commit target value
+                Tracer.TraceWarning("Committing value to target attribute {0}...", 1, r.Target.Name);
+                r.Target.SetTargetValue(r.Direction, csentry, mventry, transformedValues);
+                r = null;
             }
             catch (Exception ex)
             {

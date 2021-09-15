@@ -31,6 +31,9 @@ namespace FIM.MARE
 		[XmlElement("Transforms")]
 		public Transforms Transforms { get; set; }
 
+		[XmlAttribute("FromOtherConnector")]
+        public string FromOtherConnector { get; set; }
+
 		public object Transform(object value, TransformDirection direction)
 		{
 			Tracer.TraceInformation("enter-transform {0}", direction);
@@ -70,9 +73,6 @@ namespace FIM.MARE
 
 		[XmlAttribute("RetrieveFrom")]
 		public string RetrieveFrom { get; set; }
-
-        [XmlAttribute("FromOtherConnector")]
-        public string FromOtherConnector { get; set; }
 
         public string GetValueOrDefault(Direction direction, CSEntry csentry, MVEntry mventry)
 		{
@@ -237,7 +237,7 @@ namespace FIM.MARE
 				}
 			}
 		}
-		protected List<object> FromValueCollection(object value)
+		protected List<object> FromValueCollection(object value) // Transform a string, List<object> or ValueCollection to a List<object>
 		{
 			List<object> values = new List<object>();
 			if (value.GetType() == typeof(List<object>))
@@ -267,16 +267,11 @@ namespace FIM.MARE
 		[XmlAttribute("Value")]
 		public string Value { get; set; }
 
-        [XmlAttribute("FromOtherConnector")]
-        public string FromOtherConnector { get; set; }
     }
 	public class MultiValueAttribute : Value
 	{
 		[XmlAttribute("Name")]
 		public string Name { get; set; }
-
-        [XmlAttribute("FromOtherConnector")]
-        public string FromOtherConnector { get; set; }
 
         public object GetValueOrDefault(Direction direction, CSEntry csentry, MVEntry mventry)
 		{
