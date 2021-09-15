@@ -25,7 +25,7 @@ namespace FIM.MARE
         {
             string msg = string.Format(message, param);
             trace.TraceEvent(TraceEventType.Warning, warningCode, GetMessageFromException(null, message));
-            WriteToEventLog(message, EventLogEntryType.Warning, warningCode, 0);
+            WriteToEventLog(msg, EventLogEntryType.Warning, warningCode, 0);
         }
         internal static string GetMessageFromException(Exception ex, string message)
         {
