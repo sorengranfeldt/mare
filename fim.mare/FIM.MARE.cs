@@ -434,19 +434,37 @@ namespace FIM.MARE
                     }
                 }
 
+                // Step 4: Apply Transforms on Target
+                Tracer.TraceWarning("Applying transforms on target...", 1); // TODO: switch to TraceInformation()
+                //List<object>transformedValues = (List<object>)r.Target.Transform(listTargetValue, TransformDirection.Target);
+                listTargetValue = (List<object>)r.Target.Transform(listTargetValue, TransformDirection.Target);
 
-                // Step 4: If Target if monovalued, concatenate value to get a String
-                // TODO: Implement concatenation
-                //if (rule.Direction == Direction.Import && mventry[r.Target.Name].IsMultivalued || 
-                //    rule.Direction == Direction.Export && csentry[r.Target.Name].IsMultivalued)
-
-                // Step 5: Apply Transforms on Target
-                Tracer.TraceWarning("Applying transforms on target...", 1);
-                List<object>transformedValues = (List<object>)r.Target.Transform(listTargetValue, TransformDirection.Target);
-
+                // Step 5: If Target if monovalued, concatenate values to get a String
+                string strValue = null;
+                if (rule.Direction == Direction.Import && !(mventry[r.Target.Name].IsMultivalued) || 
+                    rule.Direction == Direction.Export && !(csentry[r.Target.Name].IsMultivalued))
+                {
+                    Tracer.TraceWarning("Target is monovalued, concatenating values.", 1); // TODO: switch to TraceInformation()
+                    foreach (object targetValue in listTargetValue)
+                    {
+                        strValue += targetValue.ToString(); // target Value or targetValue.toString() ?
+                    }
+                    //listTargetValue = strValue;
+                }
+                
                 // Finally, commit target value
-                Tracer.TraceWarning("Committing value to target attribute {0}...", 1, r.Target.Name);
-                r.Target.SetTargetValue(r.Direction, csentry, mventry, transformedValues);
+                if (rule.Direction == Direction.Import && mventry[r.Target.Name].IsMultivalued || 
+                    rule.Direction == Direction.Export && csentry[r.Target.Name].IsMultivalued)
+                {
+                    Tracer.TraceWarning("Committing values {1} to target attribute {0}...", 1, r.Target.Name, listTargetValue); // TODO: switch to TraceInformation()
+                    r.Target.SetTargetValue(r.Direction, csentry, mventry, listTargetValue);
+
+                }
+                else
+                {
+                    Tracer.TraceWarning("Committing string {1} to target attribute {0}...", 1, r.Target.Name, strValue); // TODO: switch to TraceInformation()
+                    r.Target.SetTargetValue(r.Direction, csentry, mventry, strValue);
+                }
                 r = null;
             }
             catch (Exception ex)
