@@ -161,6 +161,11 @@ namespace FIM.MARE
         }
         DeprovisionAction IMASynchronization.Deprovision(CSEntry csentry)
         {
+            return InvokeDeprovisionDetached(csentry);
+        }
+
+        public DeprovisionAction InvokeDeprovisionDetached(CSEntry csentry)
+        {
             Tracer.TraceInformation("enter-deprovision");
             List<DeprovisionOption> deprovisionOptions = null;
             try
@@ -189,7 +194,7 @@ namespace FIM.MARE
 
                     if (deprovisionOption != null)
                     {
-                        Tracer.TraceInformation("rule-found-returning-action: [{0}]", deprovisionOption.Action);
+                        Tracer.TraceInformation("rule-found-returning-action: [{0}]:[{1}]", deprovisionOption.Name, deprovisionOption.Action);
                         return FromOperation(deprovisionOption.Action);
                     }
                     Tracer.TraceInformation("no-conditions-apply-returning-default-action", ma.DeprovisionRule.DefaultOperation);
