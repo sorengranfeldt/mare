@@ -180,7 +180,7 @@ namespace FIM.MARE
                     var rule = ma.DeprovisionRule as DeprovisionRuleCode;
                     return InvokeDeprovisionRuleCode(ma, rule, csentry);
                 }
-                else
+                else if(ma.DeprovisionRule is DeprovisionRule)
                 {
                     deprovisionOptions = ma.DeprovisionRule.DeprovisionOption;
 
@@ -199,6 +199,12 @@ namespace FIM.MARE
                     }
                     Tracer.TraceInformation("no-conditions-apply-returning-default-action", ma.DeprovisionRule.DefaultOperation);
                     return FromOperation(ma.DeprovisionRule.DefaultOperation);
+                } 
+                else
+                {
+                    string message = "deprovisioning-rule-not-found";
+                    Tracer.TraceInformation(message);
+                    throw new NotImplementedException(message);
                 }
             }
             catch (Exception ex)
