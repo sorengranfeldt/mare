@@ -16,7 +16,9 @@ namespace FIM.MARE
 		ExplicitDisconnect
 	}
 
-	public class DeprovisionRule
+    [XmlInclude(typeof(DeprovisionRuleCode))]
+    
+    public class DeprovisionRule
 	{
 		[XmlAttribute("DefaultOperation")]
 		[XmlTextAttribute()]
@@ -31,7 +33,9 @@ namespace FIM.MARE
 		}
 	}
 
-	public class DeprovisionOption
+	public class DeprovisionRuleCode : DeprovisionRule { }
+
+    public class DeprovisionOption
 	{
 		[XmlAttribute("Name")]
 		public string Name { get; set; }

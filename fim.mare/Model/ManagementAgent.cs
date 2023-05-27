@@ -34,7 +34,12 @@ namespace FIM.MARE
 		{
 			instance.MapAttributesForExport(FlowRuleName, mventry, csentry);
 		}
-		public void LoadAssembly()
+        public DeprovisionAction InvokeDeprovision(CSEntry csentry)
+        {
+			return instance.Deprovision(csentry);
+        }
+
+        public void LoadAssembly()
 		{
 			if (string.IsNullOrEmpty(this.CustomDLL))
 			{
@@ -55,6 +60,7 @@ namespace FIM.MARE
 					if (type != null)
 					{
 						instance = Activator.CreateInstance(type) as IMASynchronization;
+						instance.Initialize();
 					}
 				}
 			}
