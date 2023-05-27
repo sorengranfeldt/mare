@@ -161,32 +161,51 @@ namespace FIM.MARE
         }
         DeprovisionAction IMASynchronization.Deprovision(CSEntry csentry)
         {
+            return InvokeDeprovisionDetached(csentry);
+        }
+
+        public DeprovisionAction InvokeDeprovisionDetached(CSEntry csentry)
+        {
             Tracer.TraceInformation("enter-deprovision");
-            List<DeprovisionOption> rules = null;
+            List<DeprovisionOption> deprovisionOptions = null;
             try
             {
                 string maName = csentry.MA.Name;
-                Tracer.TraceInformation("ma: {1}, dn: {2}", maName, csentry.DN);
+                Tracer.TraceInformation("ma: {0}, dn: {1}", maName, csentry.DN);
 
                 ManagementAgent ma = config.ManagementAgent.FirstOrDefault(m => m.Name.Equals(maName));
                 if (ma == null) throw new NotImplementedException("management-agent-" + maName + "-not-found");
-
-                rules = ma.DeprovisionRule.DeprovisionOption.ToList<DeprovisionOption>();
-
-                if (rules == null)
+                if (ma.DeprovisionRule is DeprovisionRuleCode)
                 {
-                    Tracer.TraceInformation("no-rules-defined-returning-default-action", ma.DeprovisionRule.DefaultOperation);
+                    var rule = ma.DeprovisionRule as DeprovisionRuleCode;
+                    return InvokeDeprovisionRuleCode(ma, rule, csentry);
+                }
+                else if(ma.DeprovisionRule is DeprovisionRule)
+                {
+                    deprovisionOptions = ma.DeprovisionRule.DeprovisionOption;
+
+                    if (deprovisionOptions == null)
+                    {
+                        Tracer.TraceInformation("no-rules-defined-returning-default-action", ma.DeprovisionRule.DefaultOperation);
+                        return FromOperation(ma.DeprovisionRule.DefaultOperation);
+                    }
+
+                    var deprovisionOption = deprovisionOptions.Where(ru => ru.Conditions.AreMet(csentry, null)).FirstOrDefault();
+
+                    if (deprovisionOption != null)
+                    {
+                        Tracer.TraceInformation("rule-found-returning-action: [{0}]:[{1}]", deprovisionOption.Name, deprovisionOption.Action);
+                        return FromOperation(deprovisionOption.Action);
+                    }
+                    Tracer.TraceInformation("no-conditions-apply-returning-default-action", ma.DeprovisionRule.DefaultOperation);
                     return FromOperation(ma.DeprovisionRule.DefaultOperation);
-                }
-
-                foreach (DeprovisionOption r in rules)
+                } 
+                else
                 {
-                    Tracer.TraceInformation("found-option name: {0}, description: {1}", r.Name, r.Description);
+                    string message = "deprovisioning-rule-not-found";
+                    Tracer.TraceInformation(message);
+                    throw new NotImplementedException(message);
                 }
-
-                //DeprovisionRule rule = rules.Where(ru => ru.Conditions.AreMet(csentry, mventry)).FirstOrDefault();
-
-                return FromOperation(ma.DeprovisionRule.DefaultOperation);
             }
             catch (Exception ex)
             {
@@ -195,10 +214,10 @@ namespace FIM.MARE
             }
             finally
             {
-                if (rules != null)
+                if (deprovisionOptions != null)
                 {
-                    rules?.Clear();
-                    rules = null;
+                    deprovisionOptions?.Clear();
+                    deprovisionOptions = null;
                 }
                 Tracer.TraceInformation("exit-deprovision");
             }
@@ -353,6 +372,24 @@ namespace FIM.MARE
             {
                 Tracer.TraceInformation("exit-invokeflowrule {0}", rule.Name);
             }
+        }
+        public DeprovisionAction InvokeDeprovisionRuleCode(ManagementAgent ma, DeprovisionRuleCode rule, CSEntry csentry)
+        {
+            Tracer.TraceInformation("enter-invokedeprovisionrulecode");
+            try
+            {
+                ma.InvokeDeprovision(csentry);
+            }
+            catch (Exception ex)
+            {
+                Tracer.TraceError("invokedeprovisionrulecode {0}", ex.GetBaseException());
+                throw ex;
+            }
+            finally
+            {
+                Tracer.TraceInformation("exit-invokedeprovisionrulecode");
+            }
+            return FromOperation(rule.DefaultOperation);
         }
         public void InvokeFlowRuleCode(ManagementAgent ma, FlowRule rule, CSEntry csentry, MVEntry mventry)
         {
